@@ -21,7 +21,9 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry
 import java.io.IOException
-import java.util.concurrent.Executors
+import java.util.concurrent.SynchronousQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 
 /** FastContactsPlugin */
@@ -34,7 +36,11 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
     private lateinit var context: Context
 
-    private val fullSizeImageExecutor = Executors.newCachedThreadPool()
+    private val imageExecutor = ThreadPoolExecutor(
+            1, 20,
+            20L, TimeUnit.SECONDS,
+            SynchronousQueue<Runnable>()
+    )
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "com.github.s0nerik.fast_contacts")
@@ -58,15 +64,14 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 val args = call.arguments as Map<String, String>
                 val contactId = args.getValue("id").toLong()
                 if (args["size"] == "thumbnail") {
-                    ContactThumbnailImageLoader(
+                    ContactThumbnailLoaderAsyncTask(
                             context = oldRegistar?.activeContext() ?: context,
-                            plugin = this,
                             contactId = contactId,
                             onResult = { result.success(it) },
                             onError = {
                                 result.error("", it.localizedMessage, it.toString())
                             }
-                    ).load()
+                    ).executeOnExecutor(imageExecutor)
                 } else {
                     ContactImageLoaderAsyncTask(
                             context = oldRegistar?.activeContext() ?: context,
@@ -75,7 +80,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                             onError = {
                                 result.error("", it.localizedMessage, it.toString())
                             }
-                    ).executeOnExecutor(fullSizeImageExecutor)
+                    ).executeOnExecutor(imageExecutor)
                 }
             }
             else -> result.notImplemented()
@@ -174,49 +179,48 @@ private class ContactsLoader(
     }
 }
 
-private class ContactThumbnailImageLoader(
+private class ContactThumbnailLoaderAsyncTask(
         private val context: Context,
-        private val plugin: FastContactsPlugin,
         private val contactId: Long,
         private val onResult: (ByteArray?) -> Unit,
         private val onError: (Exception) -> Unit
-) : LoaderManager.LoaderCallbacks<Cursor> {
-    fun load() {
-        LoaderManager.getInstance(plugin).initLoader(1, null, this)
-    }
+) : AsyncTask<Void, Void, Unit>() {
+    private val handler = Handler(context.mainLooper)
 
-    override fun onCreateLoader(id: Int, args: Bundle?): CursorLoader {
+    override fun doInBackground(vararg params: Void?) {
         val contactUri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId)
-        return CursorLoader(
-                context,
-                Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY),
-                arrayOf(ContactsContract.Contacts.Photo.PHOTO),
-                null,
-                null,
-                null
-        )
-    }
-
-    override fun onLoadFinished(loader: Loader<Cursor>, data: Cursor?) {
         try {
-            if (data == null) {
-                onResult(null)
-            } else {
-                data.use {
-                    if (data.moveToNext()) {
-                        val bytes = data.getBlob(0)
-                        onResult(bytes)
+            val cursor = context.contentResolver.query(
+                    Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY),
+                    arrayOf(ContactsContract.Contacts.Photo.PHOTO),
+                    null,
+                    null,
+                    null
+            )
+            if (cursor != null) {
+                cursor.use {
+                    if (cursor.moveToNext()) {
+                        val result = cursor.getBlob(0)
+                        handler.post {
+                            onResult(result)
+                        }
                     } else {
-                        onResult(null)
+                        handler.post {
+                            onResult(null)
+                        }
                     }
                 }
+            } else {
+                handler.post {
+                    onResult(null)
+                }
             }
-        } catch (e: Exception) {
-            onError(e)
+        } catch (e: IOException) {
+            handler.post {
+                onError(e)
+            }
         }
     }
-
-    override fun onLoaderReset(loader: Loader<Cursor>) {}
 }
 
 private class ContactImageLoaderAsyncTask(
@@ -225,6 +229,8 @@ private class ContactImageLoaderAsyncTask(
         private val onResult: (ByteArray?) -> Unit,
         private val onError: (Exception) -> Unit
 ) : AsyncTask<Void, Void, Unit>() {
+    private val handler = Handler(context.mainLooper)
+
     override fun doInBackground(vararg params: Void?) {
         val contactUri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId)
         val displayPhotoUri = Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.DISPLAY_PHOTO)
@@ -234,18 +240,18 @@ private class ContactImageLoaderAsyncTask(
                 fd.use {
                     fd.createInputStream().use {
                         val result = it.readBytes()
-                        Handler(context.mainLooper).post {
+                        handler.post {
                             onResult(result)
                         }
                     }
                 }
             } else {
-                Handler(context.mainLooper).post {
+                handler.post {
                     onResult(null)
                 }
             }
         } catch (e: IOException) {
-            Handler(context.mainLooper).post {
+            handler.post {
                 onError(e)
             }
         }
