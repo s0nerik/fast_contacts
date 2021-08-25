@@ -1,3 +1,7 @@
-## 0.0.1
+## 1.0.0
 
-* TODO: Describe initial release.
+Null-safety support
+
+## 0.1.0
+
+Initial implementation. Pre-NNBD.
