@@ -17,7 +17,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   List<Contact> _contacts = const [];
-  String _text;
+  String? _text;
 
   @override
   void initState() {
@@ -79,8 +79,8 @@ class _MyAppState extends State<MyApp> {
 
 class _ContactImage extends StatefulWidget {
   const _ContactImage({
-    Key key,
-    @required this.contact,
+    Key? key,
+    required this.contact,
   }) : super(key: key);
 
   final Contact contact;
@@ -90,7 +90,7 @@ class _ContactImage extends StatefulWidget {
 }
 
 class __ContactImageState extends State<_ContactImage> {
-  Future<Uint8List> _imageFuture;
+  late Future<Uint8List?> _imageFuture;
 
   @override
   void initState() {
@@ -100,14 +100,14 @@ class __ContactImageState extends State<_ContactImage> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
+    return FutureBuilder<Uint8List?>(
       future: _imageFuture,
       builder: (context, snapshot) => Container(
         width: 56,
         height: 56,
         child: snapshot.hasData
-            ? Image.memory(snapshot.data, gaplessPlayback: true)
-            : null,
+            ? Image.memory(snapshot.data!, gaplessPlayback: true)
+            : Icon(Icons.account_box_rounded),
       ),
     );
   }

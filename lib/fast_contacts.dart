@@ -5,12 +5,12 @@ import 'package:flutter/services.dart';
 
 class Contact {
   Contact._({
-    this.id,
-    this.displayName,
-    this.phones,
+    required this.id,
+    required this.displayName,
+    required this.phones,
   });
 
-  factory Contact.fromMap(Map map) => Contact._(
+  factory Contact._fromMap(Map map) => Contact._(
         id: map['id'] as String,
         displayName: map['displayName'] as String,
         phones: (map['phones'] as List).cast<String>(),
@@ -44,10 +44,10 @@ class FastContacts {
 
   static Future<List<Contact>> get allContacts async {
     final contacts = await _channel.invokeMethod<List>('getContacts');
-    return contacts.map((map) => Contact.fromMap(map)).toList();
+    return contacts?.map((map) => Contact._fromMap(map)).toList() ?? const [];
   }
 
-  static Future<Uint8List> getContactImage(
+  static Future<Uint8List?> getContactImage(
     String contactId, {
     ContactImageSize size = ContactImageSize.thumbnail,
   }) =>
