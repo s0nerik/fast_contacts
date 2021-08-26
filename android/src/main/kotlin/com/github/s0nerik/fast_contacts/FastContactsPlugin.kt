@@ -37,7 +37,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     private lateinit var context: Context
 
     private val imageExecutor = ThreadPoolExecutor(
-            1, 20,
+            4, Integer.MAX_VALUE,
             20L, TimeUnit.SECONDS,
             SynchronousQueue<Runnable>()
     )
