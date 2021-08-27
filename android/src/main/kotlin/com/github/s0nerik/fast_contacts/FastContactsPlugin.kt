@@ -2,7 +2,6 @@ package com.github.s0nerik.fast_contacts
 
 import android.content.ContentResolver
 import android.content.ContentUris
-import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.os.AsyncTask
@@ -29,9 +28,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, ViewModelStoreOwner {
     private lateinit var channel: MethodChannel
     private lateinit var contentResolver: ContentResolver
-
-    private lateinit var context: Context
-
     private lateinit var handler: Handler
 
     private val contactsExecutor = ThreadPoolExecutor(
@@ -48,7 +44,6 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "com.github.s0nerik.fast_contacts")
-        context = flutterPluginBinding.applicationContext
         handler = Handler(flutterPluginBinding.applicationContext.mainLooper)
         contentResolver = flutterPluginBinding.applicationContext.contentResolver
         channel.setMethodCallHandler(this)
@@ -64,7 +59,8 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 val contactId = args.getValue("id").toLong()
                 if (args["size"] == "thumbnail") {
                     ContactThumbnailLoaderAsyncTask(
-                            context = context,
+                            handler = handler,
+                            contentResolver = contentResolver,
                             contactId = contactId,
                             onResult = { result.success(it) },
                             onError = {
@@ -73,7 +69,8 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                     ).executeOnExecutor(imageExecutor)
                 } else {
                     ContactImageLoaderAsyncTask(
-                            context = context,
+                            handler = handler,
+                            contentResolver = contentResolver,
                             contactId = contactId,
                             onResult = { result.success(it) },
                             onError = {
@@ -255,17 +252,16 @@ private enum class TargetInfo {
 }
 
 private class ContactThumbnailLoaderAsyncTask(
-        private val context: Context,
+        private val handler: Handler,
+        private val contentResolver: ContentResolver,
         private val contactId: Long,
         private val onResult: (ByteArray?) -> Unit,
         private val onError: (Exception) -> Unit
 ) : AsyncTask<Void, Void, Unit>() {
-    private val handler = Handler(context.mainLooper)
-
     override fun doInBackground(vararg params: Void?) {
         val contactUri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId)
         try {
-            val cursor = context.contentResolver.query(
+            val cursor = contentResolver.query(
                     Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY),
                     arrayOf(ContactsContract.Contacts.Photo.PHOTO),
                     null,
@@ -299,18 +295,17 @@ private class ContactThumbnailLoaderAsyncTask(
 }
 
 private class ContactImageLoaderAsyncTask(
-        private val context: Context,
+        private val handler: Handler,
+        private val contentResolver: ContentResolver,
         private val contactId: Long,
         private val onResult: (ByteArray?) -> Unit,
         private val onError: (Exception) -> Unit
 ) : AsyncTask<Void, Void, Unit>() {
-    private val handler = Handler(context.mainLooper)
-
     override fun doInBackground(vararg params: Void?) {
         val contactUri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId)
         val displayPhotoUri = Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.DISPLAY_PHOTO)
         try {
-            val fd = context.contentResolver.openAssetFileDescriptor(displayPhotoUri, "r")
+            val fd = contentResolver.openAssetFileDescriptor(displayPhotoUri, "r")
             if (fd != null) {
                 fd.use {
                     fd.createInputStream().use {
