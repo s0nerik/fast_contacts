@@ -19,6 +19,8 @@ class _MyAppState extends State<MyApp> {
   List<Contact> _contacts = const [];
   String? _text;
 
+  final _ctrl = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +34,7 @@ class _MyAppState extends State<MyApp> {
       await Permission.contacts.request();
       final sw = Stopwatch()..start();
       final contacts = await FastContacts.allContacts;
+      sw.stop();
       _contacts = contacts;
       _text = 'Contacts: ${contacts.length}\nTook: ${sw.elapsedMilliseconds}ms';
     } on PlatformException catch (e) {
@@ -57,20 +60,47 @@ class _MyAppState extends State<MyApp> {
           children: [
             Text(_text ?? ''),
             Expanded(
-              child: ListView.builder(
-                itemCount: _contacts.length,
-                itemBuilder: (context, index) => ListTile(
-                  leading: _ContactImage(contact: _contacts[index]),
-                  title: Text(_contacts[index].displayName),
-                  subtitle: Text(
-                    _contacts[index]
-                        .phones
-                        .firstWhere((_) => true, orElse: () => ''),
-                  ),
+              child: Scrollbar(
+                controller: _ctrl,
+                isAlwaysShown: true,
+                interactive: true,
+                showTrackOnHover: true,
+                thickness: 24,
+                child: ListView.builder(
+                  controller: _ctrl,
+                  itemCount: _contacts.length,
+                  itemExtent: _ContactItem.height,
+                  itemBuilder: (_, index) =>
+                      _ContactItem(contact: _contacts[index]),
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContactItem extends StatelessWidget {
+  const _ContactItem({
+    Key? key,
+    required this.contact,
+  }) : super(key: key);
+
+  static final height = 72.0;
+
+  final Contact contact;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      child: ListTile(
+        leading: _ContactImage(contact: contact),
+        title: Text(contact.displayName),
+        subtitle: Text(
+          '${contact.phones.join(', ')}\n${contact.emails.join(', ')}',
         ),
       ),
     );

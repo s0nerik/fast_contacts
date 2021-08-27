@@ -53,6 +53,7 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
                 "id": contact.identifier,
                 "displayName": "\(contact.givenName) \(contact.familyName)",
                 "phones": contact.phoneNumbers.map { (p) in p.value.stringValue },
+                "emails": contact.emailAddresses.map { (email) in email.value }
             ])
         }
         return result

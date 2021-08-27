@@ -1,40 +1,44 @@
 package com.github.s0nerik.fast_contacts
 
+import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.os.AsyncTask
-import android.os.Bundle
 import android.os.Handler
 import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Phone
+import android.provider.ContactsContract.CommonDataKinds.Email
 import androidx.annotation.NonNull
+import androidx.core.content.ContentResolverCompat
 import androidx.lifecycle.*
-import androidx.loader.app.LoaderManager
-import androidx.loader.content.CursorLoader
-import androidx.loader.content.Loader
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import io.flutter.plugin.common.PluginRegistry
 import java.io.IOException
 import java.util.concurrent.SynchronousQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 
 /** FastContactsPlugin */
 class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, ViewModelStoreOwner {
-    /// The MethodChannel that will the communication between Flutter and native Android
-    ///
-    /// This local reference serves to register the plugin with the Flutter Engine and unregister it
-    /// when the Flutter Engine is detached from the Activity
     private lateinit var channel: MethodChannel
+    private lateinit var contentResolver: ContentResolver
 
     private lateinit var context: Context
+
+    private lateinit var handler: Handler
+
+    private val contactsExecutor = ThreadPoolExecutor(
+            4, Integer.MAX_VALUE,
+            20L, TimeUnit.SECONDS,
+            SynchronousQueue<Runnable>()
+    )
 
     private val imageExecutor = ThreadPoolExecutor(
             4, Integer.MAX_VALUE,
@@ -45,27 +49,22 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "com.github.s0nerik.fast_contacts")
         context = flutterPluginBinding.applicationContext
+        handler = Handler(flutterPluginBinding.applicationContext.mainLooper)
+        contentResolver = flutterPluginBinding.applicationContext.contentResolver
         channel.setMethodCallHandler(this)
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         when (call.method) {
             "getContacts" -> {
-                ContactsLoader(
-                        context = oldRegistar?.activeContext() ?: context,
-                        plugin = this,
-                        onResult = { result.success(it.map(Contact::asMap)) },
-                        onError = {
-                            result.error("", it.localizedMessage, it.toString())
-                        }
-                ).load()
+                getContacts(result, TargetInfo.PHONES, TargetInfo.EMAILS)
             }
             "getContactImage" -> {
                 val args = call.arguments as Map<String, String>
                 val contactId = args.getValue("id").toLong()
                 if (args["size"] == "thumbnail") {
                     ContactThumbnailLoaderAsyncTask(
-                            context = oldRegistar?.activeContext() ?: context,
+                            context = context,
                             contactId = contactId,
                             onResult = { result.success(it) },
                             onError = {
@@ -74,7 +73,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                     ).executeOnExecutor(imageExecutor)
                 } else {
                     ContactImageLoaderAsyncTask(
-                            context = oldRegistar?.activeContext() ?: context,
+                            context = context,
                             contactId = contactId,
                             onResult = { result.success(it) },
                             onError = {
@@ -101,81 +100,157 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         return ViewModelStore()
     }
 
-    // This static function is optional and equivalent to onAttachedToEngine. It supports the old
-    // pre-Flutter-1.12 Android projects. You are encouraged to continue supporting
-    // plugin registration via this function while apps migrate to use the new Android APIs
-    // post-flutter-1.12 via https://flutter.dev/go/android-project-migration.
-    //
-    // It is encouraged to share logic between onAttachedToEngine and registerWith to keep
-    // them functionally equivalent. Only one of onAttachedToEngine or registerWith will be called
-    // depending on the user's project. onAttachedToEngine or registerWith must both be defined
-    // in the same class.
-    companion object {
-        private var oldRegistar: PluginRegistry.Registrar? = null
+    private fun getContacts(result: Result, vararg targetInfo: TargetInfo) {
+        val signalledError = AtomicBoolean(false)
+        val signalledValue = AtomicBoolean(false)
+        val results = mutableMapOf<TargetInfo, Map<Long, Contact>>()
 
-        @JvmStatic
-        fun registerWith(registrar: PluginRegistry.Registrar) {
-            oldRegistar = registrar
-            val channel = MethodChannel(registrar.messenger(), "com.github.s0nerik.fast_contacts")
-            channel.setMethodCallHandler(FastContactsPlugin())
+        fun handleResultsReady() {
+            val mergedContacts = mergeContactsInfo(results.values)
+            handler.post {
+                result.success(mergedContacts.map(Contact::asMap))
+            }
         }
-    }
-}
 
-private class ContactsLoader(
-        private val context: Context,
-        private val plugin: FastContactsPlugin,
-        private val onResult: (Collection<Contact>) -> Unit,
-        private val onError: (Exception) -> Unit
-) : LoaderManager.LoaderCallbacks<Cursor> {
-    fun load() {
-        LoaderManager.getInstance(plugin).initLoader(0, null, this)
-    }
-
-    override fun onCreateLoader(id: Int, args: Bundle?) = CursorLoader(
-            context,
-            Phone.CONTENT_URI,
-            PROJECTION_LIST,
-            null,
-            null,
-            "${Phone.DISPLAY_NAME} ASC"
-    )
-
-    override fun onLoadFinished(loader: Loader<Cursor>, data: Cursor?) {
-        try {
-            val contacts = mutableMapOf<Long, Contact>()
-            data?.use {
-                while (!data.isClosed && data.moveToNext()) {
-                    val contactId: Long = data.getLong(PROJECTION_LIST.indexOf(Phone.CONTACT_ID))
-                    val displayName: String = data.getString(PROJECTION_LIST.indexOf(Phone.DISPLAY_NAME))
-                            ?: ""
-                    val phone: String = data.getString(PROJECTION_LIST.indexOf(Phone.NUMBER)) ?: ""
-
-                    if (contacts.containsKey(contactId)) {
-                        (contacts[contactId]!!.phones as MutableList<String>).add(phone)
-                    } else {
-                        contacts[contactId] = Contact(
-                                id = contactId.toString(),
-                                displayName = displayName,
-                                phones = mutableListOf(phone)
-                        )
+        fun withResultHandler(target: TargetInfo, action: () -> Map<Long, Contact>) {
+            try {
+                results[target] = action()
+                if (results.size == targetInfo.size && !signalledError.get() && !signalledValue.getAndSet(true)) {
+                    handleResultsReady()
+                }
+            } catch (e: Exception) {
+                if (!signalledError.getAndSet(true)) {
+                    handler.post {
+                        result.error("", e.localizedMessage, e.toString())
                     }
                 }
             }
-            onResult(contacts.values)
-        } catch (e: Exception) {
-            onError(e)
+        }
+
+        for (target in targetInfo) {
+            when (target) {
+                TargetInfo.BASIC -> TODO()
+                TargetInfo.PHONES -> contactsExecutor.execute {
+                    withResultHandler(TargetInfo.PHONES, ::readPhonesInfo)
+                }
+                TargetInfo.EMAILS -> contactsExecutor.execute {
+                    withResultHandler(TargetInfo.EMAILS, ::readEmailsInfo)
+                }
+            }
         }
     }
 
-    override fun onLoaderReset(loader: Loader<Cursor>) {}
+    private fun mergeContactsInfo(allContactsInfo: Collection<Map<Long, Contact>>): Collection<Contact> {
+        val mergedContacts = mutableMapOf<Long, Contact>()
+
+        val contactsToMerge = mutableListOf<Contact>()
+        for (contactsMap in allContactsInfo) {
+            for (contactId in contactsMap.keys) {
+                if (mergedContacts.containsKey(contactId)) {
+                    continue
+                }
+                contactsToMerge.clear()
+                for (contacts in allContactsInfo) {
+                    val c = contacts[contactId]
+                    if (c != null) {
+                        contactsToMerge.add(c)
+                    }
+                }
+                mergedContacts[contactId] = Contact.mergeInPlace(contactsToMerge)
+            }
+        }
+
+        return mergedContacts.values
+    }
+
+    private fun readPhonesInfo(): Map<Long, Contact> {
+        val contacts = mutableMapOf<Long, Contact>()
+        readTargetInfo(TargetInfo.PHONES) { projection, cursor ->
+            val contactId = cursor.getLong(projection.indexOf(Phone.CONTACT_ID))
+            val displayName = cursor.getString(projection.indexOf(Phone.DISPLAY_NAME)) ?: ""
+            val phone = cursor.getString(projection.indexOf(Phone.NUMBER)) ?: ""
+
+            if (contacts.containsKey(contactId)) {
+                (contacts[contactId]!!.phones as MutableList<String>).add(phone)
+            } else {
+                contacts[contactId] = Contact(
+                        id = contactId.toString(),
+                        displayName = displayName,
+                        phones = mutableListOf(phone),
+                        emails = listOf()
+                )
+            }
+        }
+        return contacts
+    }
+
+    private fun readEmailsInfo(): Map<Long, Contact> {
+        val contacts = mutableMapOf<Long, Contact>()
+        readTargetInfo(TargetInfo.EMAILS) { projection, cursor ->
+            val contactId = cursor.getLong(projection.indexOf(Email.CONTACT_ID))
+            val displayName = cursor.getString(projection.indexOf(Email.DISPLAY_NAME)) ?: ""
+            val email = cursor.getString(projection.indexOf(Email.ADDRESS)) ?: ""
+
+            if (contacts.containsKey(contactId)) {
+                (contacts[contactId]!!.emails as MutableList<String>).add(email)
+            } else {
+                contacts[contactId] = Contact(
+                        id = contactId.toString(),
+                        displayName = displayName,
+                        phones = listOf(),
+                        emails = mutableListOf(email)
+                )
+            }
+        }
+        return contacts
+    }
+
+    private fun readTargetInfo(targetInfo: TargetInfo, onData: (projection: Array<String>, cursor: Cursor) -> Unit) {
+        val cursor = ContentResolverCompat.query(contentResolver, CONTENT_URI[targetInfo],
+                PROJECTION[targetInfo], null, null, SORT_ORDER[targetInfo], null)
+        cursor?.use {
+            while (!cursor.isClosed && cursor.moveToNext()) {
+                onData(PROJECTION[targetInfo]!!, cursor)
+            }
+        }
+    }
 
     companion object {
-        private val PROJECTION_LIST = arrayOf(
-                Phone.CONTACT_ID,
-                Phone.DISPLAY_NAME,
-                Phone.NUMBER
+        private val CONTENT_URI = mapOf(
+                TargetInfo.PHONES to Phone.CONTENT_URI,
+                TargetInfo.EMAILS to Email.CONTENT_URI
         )
+        private val PROJECTION = mapOf(
+                TargetInfo.PHONES to arrayOf(
+                        Phone.CONTACT_ID,
+                        Phone.DISPLAY_NAME,
+                        Phone.NUMBER
+                ),
+                TargetInfo.EMAILS to arrayOf(
+                        Email.CONTACT_ID,
+                        Email.DISPLAY_NAME,
+                        Email.ADDRESS
+                )
+        )
+        private val SORT_ORDER = mapOf(
+                TargetInfo.PHONES to "${Phone.DISPLAY_NAME} ASC",
+                TargetInfo.EMAILS to "${Email.DISPLAY_NAME} ASC"
+        )
+    }
+}
+
+private enum class TargetInfo {
+    BASIC, PHONES, EMAILS;
+
+    companion object {
+        fun fromString(str: String): TargetInfo {
+            return when (str) {
+                "basic" -> BASIC
+                "emails" -> EMAILS
+                "phones" -> PHONES
+                else -> BASIC
+            }
+        }
     }
 }
 

@@ -8,17 +8,20 @@ class Contact {
     required this.id,
     required this.displayName,
     required this.phones,
+    required this.emails,
   });
 
   factory Contact._fromMap(Map map) => Contact._(
         id: map['id'] as String,
         displayName: map['displayName'] as String,
         phones: (map['phones'] as List).cast<String>(),
+        emails: (map['emails'] as List).cast<String>(),
       );
 
   final String id;
   final String displayName;
   final List<String> phones;
+  final List<String> emails;
 
   @override
   bool operator ==(Object other) =>
@@ -27,10 +30,12 @@ class Contact {
           runtimeType == other.runtimeType &&
           id == other.id &&
           displayName == other.displayName &&
-          phones == other.phones;
+          phones == other.phones &&
+          emails == other.emails;
 
   @override
-  int get hashCode => id.hashCode ^ displayName.hashCode ^ phones.hashCode;
+  int get hashCode =>
+      id.hashCode ^ displayName.hashCode ^ phones.hashCode ^ emails.hashCode;
 }
 
 enum ContactImageSize {
