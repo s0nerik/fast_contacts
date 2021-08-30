@@ -54,7 +54,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Plugin example app'),
+          title: const Text('fast_contacts'),
         ),
         body: Column(
           children: [
@@ -92,22 +92,32 @@ class _ContactItem extends StatelessWidget {
 
   final Contact contact;
 
-  String get _nameParts {
+  String get _subtitle {
+    final phones = contact.phones.join(', ');
+    final emails = contact.emails.join(', ');
     final name = contact.structuredName;
-    if (name == null) return '';
-    return '${name.givenName}, ${name.familyName}';
+    return [
+      if (phones.isNotEmpty) phones,
+      if (emails.isNotEmpty) emails,
+      if (name != null)
+        [
+          if (name.namePrefix.isNotEmpty) name.namePrefix,
+          if (name.givenName.isNotEmpty) name.givenName,
+          if (name.middleName.isNotEmpty) name.middleName,
+          if (name.familyName.isNotEmpty) name.familyName,
+          if (name.nameSuffix.isNotEmpty) name.nameSuffix,
+        ].join(', '),
+    ].join('\n');
   }
 
   @override
   Widget build(BuildContext context) {
-    final phones = contact.phones.join(', ');
-    final emails = contact.emails.join(', ');
     return SizedBox(
       height: height,
       child: ListTile(
         leading: _ContactImage(contact: contact),
         title: Text(contact.displayName),
-        subtitle: Text('$phones\n$emails\n$_nameParts'),
+        subtitle: Text(_subtitle),
       ),
     );
   }

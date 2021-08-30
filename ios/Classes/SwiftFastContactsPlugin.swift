@@ -9,7 +9,7 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
         let instance = SwiftFastContactsPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
     }
-    
+
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "getContacts":
@@ -23,7 +23,7 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
             let args = call.arguments as! Dictionary<String, String>
             let id = args["id"]!
             let size = args["size"]!
-            
+
             DispatchQueue.global().async {
                 do {
                     let data = try self.getContactImage(contactId: id, size: size)
@@ -40,28 +40,46 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
             result(FlutterMethodNotImplemented)
         }
     }
-    
+
     private func getContacts() -> Array<Dictionary<String, Any>> {
         let contactStore = CNContactStore()
-        let keys = [CNContactPhoneNumbersKey, CNContactFamilyNameKey, CNContactGivenNameKey, CNContactNicknameKey] as [CNKeyDescriptor]
+        let keys = [
+            // Phones
+            CNContactPhoneNumbersKey,
+            // Emails
+            CNContactEmailAddressesKey,
+            // Structured name
+            CNContactNamePrefixKey,
+            CNContactGivenNameKey,
+            CNContactMiddleNameKey,
+            CNContactFamilyNameKey,
+            CNContactNameSuffixKey,
+        ] as [CNKeyDescriptor]
         let request = CNContactFetchRequest(keysToFetch: keys)
         request.sortOrder = CNContactSortOrder.givenName
-        
+
         var result = [Dictionary<String, Any>]()
         try? contactStore.enumerateContacts(with: request) { (contact, cursor) in
             result.append([
                 "id": contact.identifier,
                 "displayName": "\(contact.givenName) \(contact.familyName)",
                 "phones": contact.phoneNumbers.map { (p) in p.value.stringValue },
-                "emails": contact.emailAddresses.map { (email) in email.value }
+                "emails": contact.emailAddresses.map { (email) in email.value },
+                "structuredName": [
+                    "namePrefix": contact.namePrefix,
+                    "givenName": contact.givenName,
+                    "middleName": contact.middleName,
+                    "familyName": contact.familyName,
+                    "nameSuffix": contact.nameSuffix,
+                ],
             ])
         }
         return result
     }
-    
+
     private func getContactImage(contactId: String, size: String) throws -> FlutterStandardTypedData? {
         let contactStore = CNContactStore()
-        
+
         let contact = try contactStore.unifiedContact(
             withIdentifier: contactId,
             keysToFetch: size == "thumbnail"
