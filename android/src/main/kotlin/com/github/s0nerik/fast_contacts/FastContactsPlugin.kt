@@ -58,31 +58,23 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                     result.error("", "getContacts: 'type' must be specified", null)
                     return
                 }
-                getSpecificContacts(result, TargetInfo.fromString(type))
+                contactsExecutor.execute {
+                    withResultDispatcher(result) {
+                        getContactsInfoJsonMap(TargetInfo.fromString(type))
+                    }
+                }
             }
             "getContactImage" -> {
                 val args = call.arguments as Map<String, String>
                 val contactId = args.getValue("id").toLong()
                 if (args["size"] == "thumbnail") {
-                    ContactThumbnailLoaderAsyncTask(
-                            handler = handler,
-                            contentResolver = contentResolver,
-                            contactId = contactId,
-                            onResult = { result.success(it) },
-                            onError = {
-                                result.error("", it.localizedMessage, it.toString())
-                            }
-                    ).executeOnExecutor(imageExecutor)
+                    imageExecutor.execute {
+                        withResultDispatcher(result) { getContactThumbnail(contactId) }
+                    }
                 } else {
-                    ContactImageLoaderAsyncTask(
-                            handler = handler,
-                            contentResolver = contentResolver,
-                            contactId = contactId,
-                            onResult = { result.success(it) },
-                            onError = {
-                                result.error("", it.localizedMessage, it.toString())
-                            }
-                    ).executeOnExecutor(imageExecutor)
+                    imageExecutor.execute {
+                        withResultDispatcher(result) { getContactImage(contactId) }
+                    }
                 }
             }
             else -> result.notImplemented()
@@ -103,23 +95,12 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         return ViewModelStore()
     }
 
-    private fun getSpecificContacts(result: Result, targetInfo: TargetInfo) {
-        contactsExecutor.execute {
-            try {
-                val contacts = when (targetInfo) {
-                    TargetInfo.BASIC -> TODO()
-                    TargetInfo.PHONES -> readPhonesInfo()
-                    TargetInfo.EMAILS -> readEmailsInfo()
-                }
-                handler.post {
-                    result.success(contacts.values.map(Contact::asMap))
-                }
-            } catch (e: Exception) {
-                handler.post {
-                    result.error("", e.localizedMessage, e.toString())
-                }
-            }
-        }
+    private fun getContactsInfoJsonMap(targetInfo: TargetInfo): List<Map<String, Any>> {
+        return when (targetInfo) {
+            TargetInfo.BASIC -> TODO()
+            TargetInfo.PHONES -> readPhonesInfo()
+            TargetInfo.EMAILS -> readEmailsInfo()
+        }.values.map(Contact::asMap)
     }
 
     private fun readPhonesInfo(): Map<Long, Contact> {
@@ -174,6 +155,43 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         }
     }
 
+    private fun getContactThumbnail(contactId: Long): ByteArray? {
+        val contactUri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId)
+        return contentResolver.query(
+                Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY),
+                arrayOf(ContactsContract.Contacts.Photo.PHOTO),
+                null,
+                null,
+                null
+        )?.use { cursor ->
+            if (cursor.moveToNext()) cursor.getBlob(0) else null
+        }
+    }
+
+    private fun getContactImage(contactId: Long): ByteArray? {
+        val contactUri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId)
+        val displayPhotoUri = Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.DISPLAY_PHOTO)
+
+        return contentResolver.openAssetFileDescriptor(displayPhotoUri, "r")?.use { fd ->
+            fd.createInputStream().use {
+                it.readBytes()
+            }
+        }
+    }
+
+    private fun <T> withResultDispatcher(result: Result, action: () -> T) {
+        try {
+            val resultValue = action()
+            handler.post {
+                result.success(resultValue)
+            }
+        } catch (e: Exception) {
+            handler.post {
+                result.error("", e.localizedMessage, e.toString())
+            }
+        }
+    }
+
     companion object {
         private val CONTENT_URI = mapOf(
                 TargetInfo.PHONES to Phone.CONTENT_URI,
@@ -208,83 +226,6 @@ private enum class TargetInfo {
                 "emails" -> EMAILS
                 "phones" -> PHONES
                 else -> BASIC
-            }
-        }
-    }
-}
-
-private class ContactThumbnailLoaderAsyncTask(
-        private val handler: Handler,
-        private val contentResolver: ContentResolver,
-        private val contactId: Long,
-        private val onResult: (ByteArray?) -> Unit,
-        private val onError: (Exception) -> Unit
-) : AsyncTask<Void, Void, Unit>() {
-    override fun doInBackground(vararg params: Void?) {
-        val contactUri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId)
-        try {
-            val cursor = contentResolver.query(
-                    Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY),
-                    arrayOf(ContactsContract.Contacts.Photo.PHOTO),
-                    null,
-                    null,
-                    null
-            )
-            if (cursor != null) {
-                cursor.use {
-                    if (cursor.moveToNext()) {
-                        val result = cursor.getBlob(0)
-                        handler.post {
-                            onResult(result)
-                        }
-                    } else {
-                        handler.post {
-                            onResult(null)
-                        }
-                    }
-                }
-            } else {
-                handler.post {
-                    onResult(null)
-                }
-            }
-        } catch (e: IOException) {
-            handler.post {
-                onError(e)
-            }
-        }
-    }
-}
-
-private class ContactImageLoaderAsyncTask(
-        private val handler: Handler,
-        private val contentResolver: ContentResolver,
-        private val contactId: Long,
-        private val onResult: (ByteArray?) -> Unit,
-        private val onError: (Exception) -> Unit
-) : AsyncTask<Void, Void, Unit>() {
-    override fun doInBackground(vararg params: Void?) {
-        val contactUri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId)
-        val displayPhotoUri = Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.DISPLAY_PHOTO)
-        try {
-            val fd = contentResolver.openAssetFileDescriptor(displayPhotoUri, "r")
-            if (fd != null) {
-                fd.use {
-                    fd.createInputStream().use {
-                        val result = it.readBytes()
-                        handler.post {
-                            onResult(result)
-                        }
-                    }
-                }
-            } else {
-                handler.post {
-                    onResult(null)
-                }
-            }
-        } catch (e: IOException) {
-            handler.post {
-                onError(e)
             }
         }
     }
