@@ -52,7 +52,13 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         when (call.method) {
             "getContacts" -> {
-                getContacts(result, TargetInfo.PHONES, TargetInfo.EMAILS)
+                val args = call.arguments as Map<String, String>
+                val type = args["type"]
+                if (type == null) {
+                    result.error("", "getContacts: 'type' must be specified", null)
+                    return
+                }
+                getSpecificContacts(result, TargetInfo.fromString(type))
             }
             "getContactImage" -> {
                 val args = call.arguments as Map<String, String>
@@ -97,67 +103,23 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         return ViewModelStore()
     }
 
-    private fun getContacts(result: Result, vararg targetInfo: TargetInfo) {
-        val signalledError = AtomicBoolean(false)
-        val signalledValue = AtomicBoolean(false)
-        val results = mutableMapOf<TargetInfo, Map<Long, Contact>>()
-
-        fun handleResultsReady() {
-            val mergedContacts = mergeContactsInfo(results.values)
-            handler.post {
-                result.success(mergedContacts.map(Contact::asMap))
-            }
-        }
-
-        fun withResultHandler(target: TargetInfo, action: () -> Map<Long, Contact>) {
+    private fun getSpecificContacts(result: Result, targetInfo: TargetInfo) {
+        contactsExecutor.execute {
             try {
-                results[target] = action()
-                if (results.size == targetInfo.size && !signalledError.get() && !signalledValue.getAndSet(true)) {
-                    handleResultsReady()
+                val contacts = when (targetInfo) {
+                    TargetInfo.BASIC -> TODO()
+                    TargetInfo.PHONES -> readPhonesInfo()
+                    TargetInfo.EMAILS -> readEmailsInfo()
+                }
+                handler.post {
+                    result.success(contacts.values.map(Contact::asMap))
                 }
             } catch (e: Exception) {
-                if (!signalledError.getAndSet(true)) {
-                    handler.post {
-                        result.error("", e.localizedMessage, e.toString())
-                    }
+                handler.post {
+                    result.error("", e.localizedMessage, e.toString())
                 }
             }
         }
-
-        for (target in targetInfo) {
-            when (target) {
-                TargetInfo.BASIC -> TODO()
-                TargetInfo.PHONES -> contactsExecutor.execute {
-                    withResultHandler(TargetInfo.PHONES, ::readPhonesInfo)
-                }
-                TargetInfo.EMAILS -> contactsExecutor.execute {
-                    withResultHandler(TargetInfo.EMAILS, ::readEmailsInfo)
-                }
-            }
-        }
-    }
-
-    private fun mergeContactsInfo(allContactsInfo: Collection<Map<Long, Contact>>): Collection<Contact> {
-        val mergedContacts = mutableMapOf<Long, Contact>()
-
-        val contactsToMerge = mutableListOf<Contact>()
-        for (contactsMap in allContactsInfo) {
-            for (contactId in contactsMap.keys) {
-                if (mergedContacts.containsKey(contactId)) {
-                    continue
-                }
-                contactsToMerge.clear()
-                for (contacts in allContactsInfo) {
-                    val c = contacts[contactId]
-                    if (c != null) {
-                        contactsToMerge.add(c)
-                    }
-                }
-                mergedContacts[contactId] = Contact.mergeInPlace(contactsToMerge)
-            }
-        }
-
-        return mergedContacts.values
     }
 
     private fun readPhonesInfo(): Map<Long, Contact> {
@@ -174,7 +136,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                         id = contactId.toString(),
                         displayName = displayName,
                         phones = mutableListOf(phone),
-                        emails = listOf()
+                        emails = emptyList()
                 )
             }
         }
@@ -194,7 +156,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 contacts[contactId] = Contact(
                         id = contactId.toString(),
                         displayName = displayName,
-                        phones = listOf(),
+                        phones = emptyList(),
                         emails = mutableListOf(email)
                 )
             }
