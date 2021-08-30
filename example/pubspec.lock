@@ -67,13 +67,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  huge_listview:
-    dependency: "direct main"
-    description:
-      name: huge_listview
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "2.0.2"
   matcher:
     dependency: transitive
     description:
@@ -116,20 +109,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.0.1"
-  quiver:
-    dependency: transitive
-    description:
-      name: quiver
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "3.0.1"
-  scrollable_positioned_list:
-    dependency: transitive
-    description:
-      name: scrollable_positioned_list
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "0.2.0-nullsafety.0"
   sky_engine:
     dependency: transitive
     description: flutter
