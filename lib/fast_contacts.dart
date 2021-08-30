@@ -9,6 +9,34 @@ abstract class Contact {
   String get displayName;
   List<String> get phones;
   List<String> get emails;
+  StructuredName? get structuredName;
+}
+
+class StructuredName {
+  StructuredName._({
+    required this.namePrefix,
+    required this.givenName,
+    required this.middleName,
+    required this.familyName,
+    required this.nameSuffix,
+  });
+
+  static StructuredName? _fromMap(Map? map) {
+    if (map == null) return null;
+    return StructuredName._(
+      namePrefix: map['namePrefix'] as String,
+      givenName: map['givenName'] as String,
+      middleName: map['middleName'] as String,
+      familyName: map['familyName'] as String,
+      nameSuffix: map['nameSuffix'] as String,
+    );
+  }
+
+  final String namePrefix;
+  final String givenName;
+  final String middleName;
+  final String familyName;
+  final String nameSuffix;
 }
 
 class _MutableContact implements Contact {
@@ -17,6 +45,7 @@ class _MutableContact implements Contact {
     required this.displayName,
     required this.phones,
     required this.emails,
+    required this.structuredName,
   });
 
   factory _MutableContact.fromMap(Map map) => _MutableContact(
@@ -24,6 +53,7 @@ class _MutableContact implements Contact {
         displayName: map['displayName'] as String,
         phones: (map['phones'] as List).cast<String>(),
         emails: (map['emails'] as List).cast<String>(),
+        structuredName: StructuredName._fromMap(map['structuredName']),
       );
 
   @override
@@ -34,6 +64,8 @@ class _MutableContact implements Contact {
   List<String> phones;
   @override
   List<String> emails;
+  @override
+  StructuredName? structuredName;
 
   @override
   bool operator ==(Object other) =>
@@ -43,11 +75,16 @@ class _MutableContact implements Contact {
           id == other.id &&
           displayName == other.displayName &&
           phones == other.phones &&
-          emails == other.emails;
+          emails == other.emails &&
+          structuredName == other.structuredName;
 
   @override
   int get hashCode =>
-      id.hashCode ^ displayName.hashCode ^ phones.hashCode ^ emails.hashCode;
+      id.hashCode ^
+      displayName.hashCode ^
+      phones.hashCode ^
+      emails.hashCode ^
+      structuredName.hashCode;
 }
 
 enum ContactImageSize {
@@ -71,10 +108,15 @@ class FastContacts {
 
   static Future<List<Contact>> get _allContactsAndroid async {
     final specificInfoContacts = await Future.wait([
-      _channel.invokeMethod<List>(
-          'getContacts', {'type': 'phones'}).then(_parseMutableContacts),
-      _channel.invokeMethod<List>(
-          'getContacts', {'type': 'emails'}).then(_parseMutableContacts),
+      _channel.invokeMethod<List>('getContacts', {
+        'type': 'phones',
+      }).then(_parseMutableContacts),
+      _channel.invokeMethod<List>('getContacts', {
+        'type': 'emails',
+      }).then(_parseMutableContacts),
+      _channel.invokeMethod<List>('getContacts', {
+        'type': 'structuredName',
+      }).then(_parseMutableContacts),
     ]);
     return _mergeContactsInfo(specificInfoContacts);
   }
@@ -147,6 +189,9 @@ Contact _getContactByMergingContactInfoTypes(List<_MutableContact> contacts) {
     }
     if (result.emails.isEmpty && c.emails.isNotEmpty) {
       result.emails = c.emails;
+    }
+    if (result.structuredName == null && c.structuredName != null) {
+      result.structuredName = c.structuredName;
     }
   }
 

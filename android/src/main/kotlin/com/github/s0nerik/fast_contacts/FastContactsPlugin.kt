@@ -4,11 +4,11 @@ import android.content.ContentResolver
 import android.content.ContentUris
 import android.database.Cursor
 import android.net.Uri
-import android.os.AsyncTask
 import android.os.Handler
 import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.CommonDataKinds.Email
+import android.provider.ContactsContract.CommonDataKinds.StructuredName
 import androidx.annotation.NonNull
 import androidx.core.content.ContentResolverCompat
 import androidx.lifecycle.*
@@ -17,11 +17,9 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import java.io.IOException
 import java.util.concurrent.SynchronousQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 
 /** FastContactsPlugin */
@@ -95,12 +93,40 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         return ViewModelStore()
     }
 
-    private fun getContactsInfoJsonMap(targetInfo: TargetInfo): List<Map<String, Any>> {
+    private fun getContactsInfoJsonMap(targetInfo: TargetInfo): List<Map<String, Any?>> {
         return when (targetInfo) {
-            TargetInfo.BASIC -> TODO()
             TargetInfo.PHONES -> readPhonesInfo()
             TargetInfo.EMAILS -> readEmailsInfo()
+            TargetInfo.STRUCTURED_NAME -> readStructuredNameInfo()
         }.values.map(Contact::asMap)
+    }
+
+    private fun readStructuredNameInfo(): Map<Long, Contact> {
+        val contacts = mutableMapOf<Long, Contact>()
+        readTargetInfo(TargetInfo.STRUCTURED_NAME) { projection, cursor ->
+            val contactId = cursor.getLong(projection.indexOf(StructuredName.CONTACT_ID))
+            val displayName = cursor.getString(projection.indexOf(StructuredName.DISPLAY_NAME))
+                    ?: ""
+
+            val prefix = cursor.getString(projection.indexOf(StructuredName.PREFIX)) ?: ""
+            val givenName = cursor.getString(projection.indexOf(StructuredName.GIVEN_NAME)) ?: ""
+            val middleName = cursor.getString(projection.indexOf(StructuredName.MIDDLE_NAME)) ?: ""
+            val familyName = cursor.getString(projection.indexOf(StructuredName.FAMILY_NAME)) ?: ""
+            val suffix = cursor.getString(projection.indexOf(StructuredName.SUFFIX)) ?: ""
+
+            contacts[contactId] = Contact(
+                    id = contactId.toString(),
+                    displayName = displayName,
+                    structuredName = StructuredName(
+                            namePrefix = prefix,
+                            givenName = givenName,
+                            middleName = middleName,
+                            familyName = familyName,
+                            nameSuffix = suffix
+                    )
+            )
+        }
+        return contacts
     }
 
     private fun readPhonesInfo(): Map<Long, Contact> {
@@ -116,8 +142,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 contacts[contactId] = Contact(
                         id = contactId.toString(),
                         displayName = displayName,
-                        phones = mutableListOf(phone),
-                        emails = emptyList()
+                        phones = mutableListOf(phone)
                 )
             }
         }
@@ -137,7 +162,6 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 contacts[contactId] = Contact(
                         id = contactId.toString(),
                         displayName = displayName,
-                        phones = emptyList(),
                         emails = mutableListOf(email)
                 )
             }
@@ -147,7 +171,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
     private fun readTargetInfo(targetInfo: TargetInfo, onData: (projection: Array<String>, cursor: Cursor) -> Unit) {
         val cursor = ContentResolverCompat.query(contentResolver, CONTENT_URI[targetInfo],
-                PROJECTION[targetInfo], null, null, SORT_ORDER[targetInfo], null)
+                PROJECTION[targetInfo], SELECTION[targetInfo], SELECTION_ARGS[targetInfo], SORT_ORDER[targetInfo], null)
         cursor?.use {
             while (!cursor.isClosed && cursor.moveToNext()) {
                 onData(PROJECTION[targetInfo]!!, cursor)
@@ -195,7 +219,8 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     companion object {
         private val CONTENT_URI = mapOf(
                 TargetInfo.PHONES to Phone.CONTENT_URI,
-                TargetInfo.EMAILS to Email.CONTENT_URI
+                TargetInfo.EMAILS to Email.CONTENT_URI,
+                TargetInfo.STRUCTURED_NAME to ContactsContract.Data.CONTENT_URI
         )
         private val PROJECTION = mapOf(
                 TargetInfo.PHONES to arrayOf(
@@ -207,25 +232,41 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                         Email.CONTACT_ID,
                         Email.DISPLAY_NAME,
                         Email.ADDRESS
+                ),
+                TargetInfo.STRUCTURED_NAME to arrayOf(
+                        StructuredName.CONTACT_ID,
+                        StructuredName.DISPLAY_NAME,
+                        StructuredName.PREFIX,
+                        StructuredName.GIVEN_NAME,
+                        StructuredName.MIDDLE_NAME,
+                        StructuredName.FAMILY_NAME,
+                        StructuredName.SUFFIX
                 )
+        )
+        private val SELECTION = mapOf(
+                TargetInfo.STRUCTURED_NAME to "${ContactsContract.Data.MIMETYPE} = ?"
+        )
+        private val SELECTION_ARGS = mapOf(
+                TargetInfo.STRUCTURED_NAME to arrayOf(StructuredName.CONTENT_ITEM_TYPE)
         )
         private val SORT_ORDER = mapOf(
                 TargetInfo.PHONES to "${Phone.DISPLAY_NAME} ASC",
-                TargetInfo.EMAILS to "${Email.DISPLAY_NAME} ASC"
+                TargetInfo.EMAILS to "${Email.DISPLAY_NAME} ASC",
+                TargetInfo.STRUCTURED_NAME to "${StructuredName.DISPLAY_NAME} ASC"
         )
     }
 }
 
 private enum class TargetInfo {
-    BASIC, PHONES, EMAILS;
+    PHONES, EMAILS, STRUCTURED_NAME;
 
     companion object {
         fun fromString(str: String): TargetInfo {
             return when (str) {
-                "basic" -> BASIC
                 "emails" -> EMAILS
                 "phones" -> PHONES
-                else -> BASIC
+                "structuredName" -> STRUCTURED_NAME
+                else -> error("Wrong TargetInfo: '$str'")
             }
         }
     }

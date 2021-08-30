@@ -92,16 +92,22 @@ class _ContactItem extends StatelessWidget {
 
   final Contact contact;
 
+  String get _nameParts {
+    final name = contact.structuredName;
+    if (name == null) return '';
+    return '${name.givenName}, ${name.familyName}';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final phones = contact.phones.join(', ');
+    final emails = contact.emails.join(', ');
     return SizedBox(
       height: height,
       child: ListTile(
         leading: _ContactImage(contact: contact),
         title: Text(contact.displayName),
-        subtitle: Text(
-          '${contact.phones.join(', ')}\n${contact.emails.join(', ')}',
-        ),
+        subtitle: Text('$phones\n$emails\n$_nameParts'),
       ),
     );
   }
