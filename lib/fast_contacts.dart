@@ -1,32 +1,44 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 
-class Contact {
-  Contact._({
+abstract class Contact {
+  String get id;
+  String get displayName;
+  List<String> get phones;
+  List<String> get emails;
+}
+
+class _MutableContact implements Contact {
+  _MutableContact({
     required this.id,
     required this.displayName,
     required this.phones,
     required this.emails,
   });
 
-  factory Contact._fromMap(Map map) => Contact._(
+  factory _MutableContact.fromMap(Map map) => _MutableContact(
         id: map['id'] as String,
         displayName: map['displayName'] as String,
         phones: (map['phones'] as List).cast<String>(),
         emails: (map['emails'] as List).cast<String>(),
       );
 
-  final String id;
-  final String displayName;
-  final List<String> phones;
-  final List<String> emails;
+  @override
+  String id;
+  @override
+  String displayName;
+  @override
+  List<String> phones;
+  @override
+  List<String> emails;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Contact &&
+      other is _MutableContact &&
           runtimeType == other.runtimeType &&
           id == other.id &&
           displayName == other.displayName &&
@@ -48,8 +60,23 @@ class FastContacts {
       const MethodChannel('com.github.s0nerik.fast_contacts');
 
   static Future<List<Contact>> get allContacts async {
+    if (Platform.isAndroid) {
+      return _allContactsAndroid;
+    }
+
     final contacts = await _channel.invokeMethod<List>('getContacts');
-    return contacts?.map((map) => Contact._fromMap(map)).toList() ?? const [];
+    return contacts?.map((map) => _MutableContact.fromMap(map)).toList() ??
+        const [];
+  }
+
+  static Future<List<Contact>> get _allContactsAndroid async {
+    final specificInfoContacts = await Future.wait([
+      _channel.invokeMethod<List>(
+          'getContacts', {'type': 'phones'}).then(_parseMutableContacts),
+      _channel.invokeMethod<List>(
+          'getContacts', {'type': 'emails'}).then(_parseMutableContacts),
+    ]);
+    return _mergeContactsInfo(specificInfoContacts);
   }
 
   static Future<Uint8List?> getContactImage(
@@ -60,4 +87,68 @@ class FastContacts {
         'id': contactId,
         'size': size == ContactImageSize.thumbnail ? 'thumbnail' : 'fullSize',
       });
+}
+
+List<_MutableContact> _parseMutableContacts(List<dynamic>? contacts) {
+  return contacts?.map((map) => _MutableContact.fromMap(map)).toList() ??
+      const <_MutableContact>[];
+}
+
+List<Contact> _mergeContactsInfo(
+  List<List<_MutableContact>> allContacts,
+) {
+  if (allContacts.length == 1) {
+    return allContacts[0];
+  }
+
+  final mergedContacts = <Contact>[];
+
+  // ID -> List of specific info type contacts
+  final contactsToMerge = <String, List<_MutableContact>>{};
+
+  for (final specificInfoContacts in allContacts) {
+    for (final contact in specificInfoContacts) {
+      if (contactsToMerge[contact.id] == null) {
+        contactsToMerge[contact.id] = [];
+      }
+      contactsToMerge[contact.id]!.add(contact);
+    }
+  }
+
+  for (final specificInfoContacts in contactsToMerge.values) {
+    mergedContacts.add(
+      _getContactByMergingContactInfoTypes(specificInfoContacts),
+    );
+  }
+
+  return mergedContacts;
+}
+
+/// Returns a list [Contact] with info merged from all [contacts].
+/// Modifies [contacts] list items in place.
+Contact _getContactByMergingContactInfoTypes(List<_MutableContact> contacts) {
+  assert(contacts.isNotEmpty);
+
+  final result = contacts[0];
+
+  if (contacts.length == 1) {
+    return result;
+  }
+
+  for (final c in contacts.skip(1)) {
+    if (result.id.isEmpty && c.id.isNotEmpty) {
+      result.id = c.id;
+    }
+    if (result.displayName.isEmpty && c.displayName.isNotEmpty) {
+      result.displayName = c.displayName;
+    }
+    if (result.phones.isEmpty && c.phones.isNotEmpty) {
+      result.phones = c.phones;
+    }
+    if (result.emails.isEmpty && c.emails.isNotEmpty) {
+      result.emails = c.emails;
+    }
+  }
+
+  return result;
 }
