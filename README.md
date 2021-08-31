@@ -2,7 +2,8 @@
 
 A **much** faster alternative to [contacts_service](https://pub.dev/packages/contacts_service) and [flutter_contact](https://pub.dev/packages/flutter_contact) for reading the device's contact book.
 
-This plugin uses recommended approaches on both platforms to achieve optimal query performance.
+This plugin was tuned to achieve optimal performance for fetching the whole list of contacts.
+Loading 1000 contacts with this plugin should take ~200ms or less depending on the device.
 
 # Usage
 
@@ -27,6 +28,14 @@ Set the `NSContactsUsageDescription` in your `Info.plist` file
 **Note**
 `fast_contacts` doesn't handle permissions. Use special plugins (like [permission_handler](https://pub.dartlang.org/packages/permission_handler)) to ask for the permission before accessing contacts.
 
+## Available contact info
+
+- ID
+- Display name
+- Structured name (prefix, given name, middle name, family name, suffix)
+- Emails
+- Phones
+
 ## Example
 
 ```dart
@@ -47,10 +56,12 @@ For a more complete usage example, see `example` project.
 
 ## Limitations
 
-* Currently, only basic contact info (id, displayName, phones) is fetched for each contact. A custom projection support is planned for the future (PR's are welcome!).
+- No support for custom contact data projections yet (PRs are welcome!)
 
 ## Performance
 
-![Android: Samsung Galaxy S8](docs/images/galaxy_s8_screenshot.jpg)
+Loading 1000+ contacts (display name, structured name, phones, emails) at once takes ~200ms on both Android (Samsung Galaxy S8) and iOS (iPhone 8).
 
-![iOS: iPhone 8](docs/images/iphone_8_screenshot.jpg)
+![Android: Samsung Galaxy S8](docs/images/android_screenshot.png)
+
+![iOS: iPhone 8](docs/images/ios_screenshot.png)
