@@ -62,6 +62,6 @@ For a more complete usage example, see `example` project.
 
 Loading 1000+ contacts (display name, structured name, phones, emails) at once takes ~200ms on both Android (Samsung Galaxy S8) and iOS (iPhone 8).
 
-![Android: Samsung Galaxy S8](docs/images/android_screenshot.png)
+![Android: Samsung Galaxy S8](doc/images/android_screenshot.png)
 
-![iOS: iPhone 8](docs/images/ios_screenshot.png)
+![iOS: iPhone 8](doc/images/ios_screenshot.png)
