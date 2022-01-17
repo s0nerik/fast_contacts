@@ -1,3 +1,7 @@
+## 1.1.1
+
+- Updated Android build config
+
 ## 1.1.0
 
 - Added `emails` and `structuredName` to Contact
