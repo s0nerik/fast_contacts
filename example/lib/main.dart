@@ -52,6 +52,12 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: ThemeData(
+          scrollbarTheme: ScrollbarThemeData(
+            trackVisibility: MaterialStateProperty.all(true),
+            thumbVisibility: MaterialStateProperty.all(true),
+          ),
+      ),
       home: Scaffold(
         appBar: AppBar(
           title: const Text('fast_contacts'),
