@@ -53,10 +53,10 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData(
-          scrollbarTheme: ScrollbarThemeData(
-            trackVisibility: MaterialStateProperty.all(true),
-            thumbVisibility: MaterialStateProperty.all(true),
-          ),
+        scrollbarTheme: ScrollbarThemeData(
+          trackVisibility: MaterialStateProperty.all(true),
+          thumbVisibility: MaterialStateProperty.all(true),
+        ),
       ),
       home: Scaffold(
         appBar: AppBar(
@@ -68,9 +68,7 @@ class _MyAppState extends State<MyApp> {
             Expanded(
               child: Scrollbar(
                 controller: _ctrl,
-                isAlwaysShown: true,
                 interactive: true,
-                showTrackOnHover: true,
                 thickness: 24,
                 child: ListView.builder(
                   controller: _ctrl,
@@ -94,7 +92,7 @@ class _ContactItem extends StatelessWidget {
     required this.contact,
   }) : super(key: key);
 
-  static final height = 72.0;
+  static final height = 86.0;
 
   final Contact contact;
 
@@ -102,6 +100,8 @@ class _ContactItem extends StatelessWidget {
     final phones = contact.phones.join(', ');
     final emails = contact.emails.join(', ');
     final name = contact.structuredName;
+    final organization = contact.organization;
+
     return [
       if (phones.isNotEmpty) phones,
       if (emails.isNotEmpty) emails,
@@ -112,6 +112,13 @@ class _ContactItem extends StatelessWidget {
           if (name.middleName.isNotEmpty) name.middleName,
           if (name.familyName.isNotEmpty) name.familyName,
           if (name.nameSuffix.isNotEmpty) name.nameSuffix,
+        ].join(', '),
+      if (organization != null)
+        [
+          if (organization.company.isNotEmpty) organization.company,
+          if (organization.department.isNotEmpty) organization.department,
+          if (organization.jobDescription.isNotEmpty)
+            organization.jobDescription,
         ].join(', '),
     ].join('\n');
   }
