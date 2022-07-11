@@ -5,14 +5,16 @@ data class Contact(
         val displayName: String,
         val phones: List<String> = emptyList(),
         val emails: List<String> = emptyList(),
-        val structuredName: StructuredName? = null
+        val structuredName: StructuredName? = null,
+        var organization: Organization? = null
 ) {
     fun asMap() = mapOf(
             "id" to id,
             "displayName" to displayName,
             "phones" to phones,
             "emails" to emails,
-            "structuredName" to structuredName?.asMap()
+            "structuredName" to structuredName?.asMap(),
+            "organization" to organization?.asMap(),
     )
 }
 
@@ -30,4 +32,16 @@ data class StructuredName(
             "familyName" to familyName,
             "nameSuffix" to nameSuffix
     )
+}
+
+data class Organization(
+        val company: String,
+        val department: String,
+        val jobDescription: String,
+) {
+        fun asMap() = mapOf(
+                "company" to company,
+                "department" to department,
+                "jobDescription" to jobDescription,
+        )
 }

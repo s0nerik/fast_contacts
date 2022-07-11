@@ -10,6 +10,7 @@ abstract class Contact {
   List<String> get phones;
   List<String> get emails;
   StructuredName? get structuredName;
+  Organization? get organization;
 }
 
 class StructuredName {
@@ -39,6 +40,27 @@ class StructuredName {
   final String nameSuffix;
 }
 
+class Organization {
+  Organization._({
+    required this.company,
+    required this.department,
+    required this.jobDescription,
+  });
+
+  static Organization? _fromMap(Map? map) {
+    if (map == null) return null;
+    return Organization._(
+      company: map['company'] as String,
+      department: map['department'] as String,
+      jobDescription: map['jobDescription'] as String,
+    );
+  }
+
+  final String company;
+  final String department;
+  final String jobDescription;
+}
+
 class _MutableContact implements Contact {
   _MutableContact({
     required this.id,
@@ -46,6 +68,7 @@ class _MutableContact implements Contact {
     required this.phones,
     required this.emails,
     required this.structuredName,
+    required this.organization,
   });
 
   factory _MutableContact.fromMap(Map map) => _MutableContact(
@@ -54,6 +77,7 @@ class _MutableContact implements Contact {
         phones: (map['phones'] as List).cast<String>(),
         emails: (map['emails'] as List).cast<String>(),
         structuredName: StructuredName._fromMap(map['structuredName']),
+        organization: Organization._fromMap(map['organization']),
       );
 
   @override
@@ -66,6 +90,8 @@ class _MutableContact implements Contact {
   List<String> emails;
   @override
   StructuredName? structuredName;
+  @override
+  Organization? organization;
 
   @override
   bool operator ==(Object other) =>
@@ -76,7 +102,8 @@ class _MutableContact implements Contact {
           displayName == other.displayName &&
           phones == other.phones &&
           emails == other.emails &&
-          structuredName == other.structuredName;
+          structuredName == other.structuredName &&
+          organization == other.organization;
 
   @override
   int get hashCode =>
@@ -84,7 +111,8 @@ class _MutableContact implements Contact {
       displayName.hashCode ^
       phones.hashCode ^
       emails.hashCode ^
-      structuredName.hashCode;
+      structuredName.hashCode ^
+      organization.hashCode;
 }
 
 enum ContactImageSize {
@@ -117,7 +145,11 @@ class FastContacts {
       _channel.invokeMethod<List>('getContacts', {
         'type': 'structuredName',
       }).then(_parseMutableContacts),
+      _channel.invokeMethod<List>('getContacts', {
+        'type': 'organization',
+      }).then(_parseMutableContacts),
     ]);
+
     return _mergeContactsInfo(specificInfoContacts);
   }
 
@@ -192,6 +224,9 @@ Contact _getContactByMergingContactInfoTypes(List<_MutableContact> contacts) {
     }
     if (result.structuredName == null && c.structuredName != null) {
       result.structuredName = c.structuredName;
+    }
+    if (result.organization == null && c.organization != null) {
+      result.organization = c.organization;
     }
   }
 
