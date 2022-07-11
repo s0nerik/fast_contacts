@@ -6,7 +6,8 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Handler
 import android.provider.ContactsContract
-import android.provider.ContactsContract.CommonDataKinds.*
+import android.provider.ContactsContract.CommonDataKinds.Phone
+import android.provider.ContactsContract.CommonDataKinds.Email
 import android.provider.ContactsContract.CommonDataKinds.StructuredName
 import android.provider.ContactsContract.CommonDataKinds.Organization
 import androidx.annotation.NonNull
@@ -98,7 +99,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             TargetInfo.PHONES -> readPhonesInfo()
             TargetInfo.EMAILS -> readEmailsInfo()
             TargetInfo.STRUCTURED_NAME -> readStructuredNameInfo()
-            TargetInfo.ORGANIZATION -> readCompanyInfo()
+            TargetInfo.ORGANIZATION -> readOrganizationInfo()
         }.values.map(Contact::asMap)
     }
 
@@ -170,7 +171,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         return contacts
     }
 
-    private fun readCompanyInfo(): Map<Long, Contact> { // TOT readOrganizationInfo()
+    private fun readOrganizationInfo(): Map<Long, Contact> {
         val contacts = mutableMapOf<Long, Contact>()
         readTargetInfo(TargetInfo.ORGANIZATION) { projection, cursor ->
             val contactId = cursor.getLong(projection.indexOf(Organization.CONTACT_ID))
