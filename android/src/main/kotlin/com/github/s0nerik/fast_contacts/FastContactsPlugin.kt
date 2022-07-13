@@ -9,6 +9,7 @@ import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.CommonDataKinds.Email
 import android.provider.ContactsContract.CommonDataKinds.StructuredName
+import android.provider.ContactsContract.CommonDataKinds.Organization
 import androidx.annotation.NonNull
 import androidx.core.content.ContentResolverCompat
 import androidx.lifecycle.*
@@ -98,6 +99,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             TargetInfo.PHONES -> readPhonesInfo()
             TargetInfo.EMAILS -> readEmailsInfo()
             TargetInfo.STRUCTURED_NAME -> readStructuredNameInfo()
+            TargetInfo.ORGANIZATION -> readOrganizationInfo()
         }.values.map(Contact::asMap)
     }
 
@@ -123,7 +125,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                             middleName = middleName,
                             familyName = familyName,
                             nameSuffix = suffix
-                    )
+                    ),
             )
         }
         return contacts
@@ -166,6 +168,35 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 )
             }
         }
+        return contacts
+    }
+
+    private fun readOrganizationInfo(): Map<Long, Contact> {
+        val contacts = mutableMapOf<Long, Contact>()
+        readTargetInfo(TargetInfo.ORGANIZATION) { projection, cursor ->
+            val contactId = cursor.getLong(projection.indexOf(Organization.CONTACT_ID))
+            val displayName = cursor.getString(projection.indexOf(Organization.DISPLAY_NAME)) ?: ""
+            val company = cursor.getString(projection.indexOf(Organization.COMPANY)) ?: ""
+            val department = cursor.getString(projection.indexOf(Organization.DEPARTMENT)) ?: ""
+            val jobDescription = cursor.getString(projection.indexOf(Organization.JOB_DESCRIPTION)) ?: ""
+
+            val mimeType = cursor.getString(projection.indexOf(Organization.MIMETYPE))
+
+            if (!contacts.containsKey(contactId)) {
+                contacts[contactId] = Contact(
+                    id = contactId.toString(),
+                    displayName = displayName,
+                )
+            }
+            if (mimeType.equals(Organization.CONTENT_ITEM_TYPE)) {
+                contacts[contactId]!!.organization = Organization(
+                    company = company,
+                    department = department,
+                    jobDescription = jobDescription,
+                )
+            }
+        }
+
         return contacts
     }
 
@@ -220,7 +251,8 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         private val CONTENT_URI = mapOf(
                 TargetInfo.PHONES to Phone.CONTENT_URI,
                 TargetInfo.EMAILS to Email.CONTENT_URI,
-                TargetInfo.STRUCTURED_NAME to ContactsContract.Data.CONTENT_URI
+                TargetInfo.STRUCTURED_NAME to ContactsContract.Data.CONTENT_URI,
+                TargetInfo.ORGANIZATION to ContactsContract.Data.CONTENT_URI
         )
         private val PROJECTION = mapOf(
                 TargetInfo.PHONES to arrayOf(
@@ -241,6 +273,14 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                         StructuredName.MIDDLE_NAME,
                         StructuredName.FAMILY_NAME,
                         StructuredName.SUFFIX
+                ),
+                TargetInfo.ORGANIZATION to arrayOf(
+                    Organization.CONTACT_ID,
+                    Organization.DISPLAY_NAME,
+                    Organization.MIMETYPE,
+                    Organization.COMPANY,
+                    Organization.DEPARTMENT,
+                    Organization.JOB_DESCRIPTION,
                 )
         )
         private val SELECTION = mapOf(
@@ -252,13 +292,14 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         private val SORT_ORDER = mapOf(
                 TargetInfo.PHONES to "${Phone.DISPLAY_NAME} ASC",
                 TargetInfo.EMAILS to "${Email.DISPLAY_NAME} ASC",
-                TargetInfo.STRUCTURED_NAME to "${StructuredName.DISPLAY_NAME} ASC"
+                TargetInfo.STRUCTURED_NAME to "${StructuredName.DISPLAY_NAME} ASC",
+                TargetInfo.ORGANIZATION to "${Organization.DISPLAY_NAME} ASC"
         )
     }
 }
 
 private enum class TargetInfo {
-    PHONES, EMAILS, STRUCTURED_NAME;
+    PHONES, EMAILS, STRUCTURED_NAME, ORGANIZATION;
 
     companion object {
         fun fromString(str: String): TargetInfo {
@@ -266,6 +307,7 @@ private enum class TargetInfo {
                 "emails" -> EMAILS
                 "phones" -> PHONES
                 "structuredName" -> STRUCTURED_NAME
+                "organization" -> ORGANIZATION
                 else -> error("Wrong TargetInfo: '$str'")
             }
         }

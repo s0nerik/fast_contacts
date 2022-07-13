@@ -35,6 +35,7 @@ Set the `NSContactsUsageDescription` in your `Info.plist` file
 - Structured name (prefix, given name, middle name, family name, suffix)
 - Emails
 - Phones
+- Organization (company, department, job description)
 
 ## Example
 

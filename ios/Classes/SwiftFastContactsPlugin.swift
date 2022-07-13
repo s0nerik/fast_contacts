@@ -54,6 +54,10 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
             CNContactMiddleNameKey,
             CNContactFamilyNameKey,
             CNContactNameSuffixKey,
+            // Work information
+            CNContactOrganizationNameKey,
+            CNContactDepartmentNameKey,
+            CNContactJobTitleKey,
         ] as [CNKeyDescriptor]
         let request = CNContactFetchRequest(keysToFetch: keys)
         request.sortOrder = CNContactSortOrder.givenName
@@ -71,6 +75,11 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
                     "middleName": contact.middleName,
                     "familyName": contact.familyName,
                     "nameSuffix": contact.nameSuffix,
+                ],
+                "organization": [
+                    "company": contact.organizationName,
+                    "department": contact.departmentName,
+                    "jobDescription": contact.jobTitle,
                 ],
             ])
         }
