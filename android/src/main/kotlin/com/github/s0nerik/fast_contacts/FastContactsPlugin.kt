@@ -6,18 +6,15 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Handler
 import android.provider.ContactsContract
-import android.provider.ContactsContract.CommonDataKinds.Phone
-import android.provider.ContactsContract.CommonDataKinds.Email
-import android.provider.ContactsContract.CommonDataKinds.StructuredName
+import android.provider.ContactsContract.CommonDataKinds.*
 import android.provider.ContactsContract.CommonDataKinds.Organization
-import androidx.annotation.NonNull
+import android.provider.ContactsContract.CommonDataKinds.StructuredName
 import androidx.core.content.ContentResolverCompat
 import androidx.lifecycle.*
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
-import io.flutter.plugin.common.MethodChannel.Result
 import java.util.concurrent.SynchronousQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -32,23 +29,23 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     private val contactsExecutor = ThreadPoolExecutor(
             4, Integer.MAX_VALUE,
             20L, TimeUnit.SECONDS,
-            SynchronousQueue<Runnable>()
+            SynchronousQueue()
     )
 
     private val imageExecutor = ThreadPoolExecutor(
             4, Integer.MAX_VALUE,
             20L, TimeUnit.SECONDS,
-            SynchronousQueue<Runnable>()
+            SynchronousQueue()
     )
 
-    override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "com.github.s0nerik.fast_contacts")
         handler = Handler(flutterPluginBinding.applicationContext.mainLooper)
         contentResolver = flutterPluginBinding.applicationContext.contentResolver
         channel.setMethodCallHandler(this)
     }
 
-    override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
+    override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "getContacts" -> {
                 val args = call.arguments as Map<String, String>
@@ -80,7 +77,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         }
     }
 
-    override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
     }
 
@@ -137,18 +134,55 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             val contactId = cursor.getLong(projection.indexOf(Phone.CONTACT_ID))
             val displayName = cursor.getString(projection.indexOf(Phone.DISPLAY_NAME)) ?: ""
             val phone = cursor.getString(projection.indexOf(Phone.NUMBER)) ?: ""
+            val type = cursor.getInt(projection.indexOf(Phone.TYPE))
+            val customLabel = cursor.getString(projection.indexOf(Phone.LABEL))
+
+            val label = customLabel ?: getPhoneLabel(type)
 
             if (contacts.containsKey(contactId)) {
-                (contacts[contactId]!!.phones as MutableList<String>).add(phone)
+                (contacts[contactId]!!.phones as MutableList<ContactPhone>).add(ContactPhone(
+                    number = phone,
+                    label = label
+                ))
             } else {
                 contacts[contactId] = Contact(
                         id = contactId.toString(),
                         displayName = displayName,
-                        phones = mutableListOf(phone)
+                        phones = mutableListOf(ContactPhone(
+                            number = phone,
+                            label = label
+                        ))
                 )
             }
         }
         return contacts
+    }
+
+    private fun getPhoneLabel(type: Int): String {
+        return when (type) {
+            Phone.TYPE_ASSISTANT -> "assistant"
+            Phone.TYPE_CALLBACK -> "callback"
+            Phone.TYPE_CAR -> "car"
+            Phone.TYPE_COMPANY_MAIN -> "companyMain"
+            Phone.TYPE_FAX_HOME -> "faxHome"
+            Phone.TYPE_FAX_WORK -> "faxWork"
+            Phone.TYPE_HOME -> "home"
+            Phone.TYPE_ISDN -> "isdn"
+            Phone.TYPE_MAIN -> "main"
+            Phone.TYPE_MMS -> "mms"
+            Phone.TYPE_MOBILE -> "mobile"
+            Phone.TYPE_OTHER -> "other"
+            Phone.TYPE_OTHER_FAX -> "faxOther"
+            Phone.TYPE_PAGER -> "pager"
+            Phone.TYPE_RADIO -> "radio"
+            Phone.TYPE_TELEX -> "telex"
+            Phone.TYPE_TTY_TDD -> "ttyTtd"
+            Phone.TYPE_WORK -> "work"
+            Phone.TYPE_WORK_MOBILE -> "workMobile"
+            Phone.TYPE_WORK_PAGER -> "workPager"
+            Phone.TYPE_CUSTOM -> "custom"
+            else -> "mobile"
+        }
     }
 
     private fun readEmailsInfo(): Map<Long, Contact> {
@@ -157,18 +191,38 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             val contactId = cursor.getLong(projection.indexOf(Email.CONTACT_ID))
             val displayName = cursor.getString(projection.indexOf(Email.DISPLAY_NAME)) ?: ""
             val email = cursor.getString(projection.indexOf(Email.ADDRESS)) ?: ""
+            val type = cursor.getInt(projection.indexOf(Phone.TYPE))
+            val customLabel = cursor.getString(projection.indexOf(Phone.LABEL))
+
+            val label = customLabel ?: getAddressLabel(type)
 
             if (contacts.containsKey(contactId)) {
-                (contacts[contactId]!!.emails as MutableList<String>).add(email)
+                (contacts[contactId]!!.emails as MutableList<ContactEmail>).add(ContactEmail(
+                    address = email,
+                    label = label
+                ))
             } else {
                 contacts[contactId] = Contact(
                         id = contactId.toString(),
                         displayName = displayName,
-                        emails = mutableListOf(email)
+                        emails = mutableListOf(ContactEmail(
+                            address = email,
+                            label = label
+                        ))
                 )
             }
         }
         return contacts
+    }
+
+    private fun getAddressLabel(type: Int): String {
+        return when (type) {
+            StructuredPostal.TYPE_HOME -> "home"
+            StructuredPostal.TYPE_OTHER -> "other"
+            StructuredPostal.TYPE_WORK -> "work"
+            StructuredPostal.TYPE_CUSTOM -> "custom"
+            else -> ""
+        }
     }
 
     private fun readOrganizationInfo(): Map<Long, Contact> {
@@ -234,7 +288,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         }
     }
 
-    private fun <T> withResultDispatcher(result: Result, action: () -> T) {
+    private fun <T> withResultDispatcher(result: MethodChannel.Result, action: () -> T) {
         try {
             val resultValue = action()
             handler.post {
@@ -258,12 +312,16 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 TargetInfo.PHONES to arrayOf(
                         Phone.CONTACT_ID,
                         Phone.DISPLAY_NAME,
-                        Phone.NUMBER
+                        Phone.NUMBER,
+                        Phone.TYPE,
+                        Phone.LABEL
                 ),
                 TargetInfo.EMAILS to arrayOf(
                         Email.CONTACT_ID,
                         Email.DISPLAY_NAME,
-                        Email.ADDRESS
+                        Email.ADDRESS,
+                        Email.TYPE,
+                        Email.LABEL
                 ),
                 TargetInfo.STRUCTURED_NAME to arrayOf(
                         StructuredName.CONTACT_ID,
