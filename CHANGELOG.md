@@ -1,3 +1,7 @@
+## 1.2.0
+
+- "Add organization fields" by @arjenfvellinga
+
 ## 1.1.1
 
 - Updated Android build config
