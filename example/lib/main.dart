@@ -96,41 +96,68 @@ class _ContactItem extends StatelessWidget {
 
   final Contact contact;
 
-  String get _subtitle {
+  @override
+  Widget build(BuildContext context) {
     final phones = contact.phones.join(', ');
     final emails = contact.emails.join(', ');
     final name = contact.structuredName;
+    final nameStr = name != null
+        ? [
+            if (name.namePrefix.isNotEmpty) name.namePrefix,
+            if (name.givenName.isNotEmpty) name.givenName,
+            if (name.middleName.isNotEmpty) name.middleName,
+            if (name.familyName.isNotEmpty) name.familyName,
+            if (name.nameSuffix.isNotEmpty) name.nameSuffix,
+          ].join(', ')
+        : '';
     final organization = contact.organization;
+    final organizationStr = organization != null
+        ? [
+            if (organization.company.isNotEmpty) organization.company,
+            if (organization.department.isNotEmpty) organization.department,
+            if (organization.jobDescription.isNotEmpty)
+              organization.jobDescription,
+          ].join(', ')
+        : '';
 
-    return [
-      if (phones.isNotEmpty) phones,
-      if (emails.isNotEmpty) emails,
-      if (name != null)
-        [
-          if (name.namePrefix.isNotEmpty) name.namePrefix,
-          if (name.givenName.isNotEmpty) name.givenName,
-          if (name.middleName.isNotEmpty) name.middleName,
-          if (name.familyName.isNotEmpty) name.familyName,
-          if (name.nameSuffix.isNotEmpty) name.nameSuffix,
-        ].join(', '),
-      if (organization != null)
-        [
-          if (organization.company.isNotEmpty) organization.company,
-          if (organization.department.isNotEmpty) organization.department,
-          if (organization.jobDescription.isNotEmpty)
-            organization.jobDescription,
-        ].join(', '),
-    ].join('\n');
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return SizedBox(
       height: height,
       child: ListTile(
         leading: _ContactImage(contact: contact),
-        title: Text(contact.displayName),
-        subtitle: Text(_subtitle),
+        title: Text(
+          contact.displayName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (phones.isNotEmpty)
+              Text(
+                phones,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            if (emails.isNotEmpty)
+              Text(
+                emails,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            if (nameStr.isNotEmpty)
+              Text(
+                nameStr,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            if (organizationStr.isNotEmpty)
+              Text(
+                organizationStr,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+          ],
+        ),
       ),
     );
   }
