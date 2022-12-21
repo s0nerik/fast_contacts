@@ -181,7 +181,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             Phone.TYPE_WORK_MOBILE -> "workMobile"
             Phone.TYPE_WORK_PAGER -> "workPager"
             Phone.TYPE_CUSTOM -> "custom"
-            else -> "mobile"
+            else -> ""
         }
     }
 
