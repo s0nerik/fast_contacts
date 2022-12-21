@@ -64,24 +64,9 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
 
         var result = [Dictionary<String, Any>]()
         try? contactStore.enumerateContacts(with: request) { (contact, cursor) in
-            result.append([
-                "id": contact.identifier,
-                "displayName": "\(contact.givenName) \(contact.familyName)",
-                "phones": contact.phoneNumbers.map { (p) in p.value.stringValue },
-                "emails": contact.emailAddresses.map { (email) in email.value },
-                "structuredName": [
-                    "namePrefix": contact.namePrefix,
-                    "givenName": contact.givenName,
-                    "middleName": contact.middleName,
-                    "familyName": contact.familyName,
-                    "nameSuffix": contact.nameSuffix,
-                ],
-                "organization": [
-                    "company": contact.organizationName,
-                    "department": contact.departmentName,
-                    "jobDescription": contact.jobTitle,
-                ],
-            ])
+            result.append(
+                Contact(fromContact: contact).toMap()
+            )
         }
         return result
     }
