@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:fast_contacts/fast_contacts.dart';
 import 'package:flutter/material.dart';
@@ -98,8 +97,8 @@ class _ContactItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final phones = contact.phones.join(', ');
-    final emails = contact.emails.join(', ');
+    final phones = contact.phones.map((e) => e.number).join(', ');
+    final emails = contact.emails.map((e) => e.address).join(', ');
     final name = contact.structuredName;
     final nameStr = name != null
         ? [
