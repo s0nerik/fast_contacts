@@ -3,10 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
-import 'src/model/contact.dart';
-import 'src/util/map_merging.dart';
-
-export 'src/model/contact.dart';
+import 'model/contact.dart';
+import 'util/map_merging.dart';
 
 class _MutableContact implements Contact {
   _MutableContact({
