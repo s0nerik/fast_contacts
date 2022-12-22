@@ -4,6 +4,9 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import 'src/model/contact.dart';
+import 'src/util/map_merging.dart';
+
+export 'src/model/contact.dart';
 
 class _MutableContact implements Contact {
   _MutableContact({
@@ -74,33 +77,31 @@ class FastContacts {
   static const MethodChannel _channel =
       const MethodChannel('com.github.s0nerik.fast_contacts');
 
-  static Future<List<Contact>> get allContacts async {
+  static Future<List<Contact>> getAllContacts() async {
+    late final Iterable<Map> contactInfoParts;
     if (Platform.isAndroid) {
-      return _allContactsAndroid;
+      final info = await Future.wait([
+        _channel.invokeMethod<List>('getContacts', {
+          'type': 'phones',
+        }),
+        _channel.invokeMethod<List>('getContacts', {
+          'type': 'emails',
+        }),
+        _channel.invokeMethod<List>('getContacts', {
+          'type': 'structuredName',
+        }),
+        _channel.invokeMethod<List>('getContacts', {
+          'type': 'organization',
+        }),
+      ]);
+      contactInfoParts = info.expand((e) => e ?? const []).cast<Map>();
+    } else {
+      final info = await _channel.invokeListMethod('getAllContacts');
+      contactInfoParts = info?.cast<Map>() ?? const [];
     }
 
-    final contacts = await _channel.invokeMethod<List>('getContacts');
-    return contacts?.map((map) => _MutableContact.fromMap(map)).toList() ??
-        const [];
-  }
-
-  static Future<List<Contact>> get _allContactsAndroid async {
-    final specificInfoContacts = await Future.wait([
-      _channel.invokeMethod<List>('getContacts', {
-        'type': 'phones',
-      }).then(_parseMutableContacts),
-      _channel.invokeMethod<List>('getContacts', {
-        'type': 'emails',
-      }).then(_parseMutableContacts),
-      _channel.invokeMethod<List>('getContacts', {
-        'type': 'structuredName',
-      }).then(_parseMutableContacts),
-      _channel.invokeMethod<List>('getContacts', {
-        'type': 'organization',
-      }).then(_parseMutableContacts),
-    ]);
-
-    return _mergeContactsInfo(specificInfoContacts);
+    final contacts = _mergeContactsInfo(contactInfoParts);
+    return contacts;
   }
 
   static Future<Uint8List?> getContactImage(
@@ -113,72 +114,23 @@ class FastContacts {
       });
 }
 
-List<_MutableContact> _parseMutableContacts(List<dynamic>? contacts) {
-  return contacts?.map((map) => _MutableContact.fromMap(map)).toList() ??
-      const <_MutableContact>[];
-}
-
 List<Contact> _mergeContactsInfo(
-  List<List<_MutableContact>> allContacts,
+  Iterable<Map?> contactInfoParts,
 ) {
-  if (allContacts.length == 1) {
-    return allContacts[0];
+  final mergedContactsMap = <String, Map>{};
+  for (final contact in contactInfoParts) {
+    if (contact == null) continue;
+    final id = contact['id'] as String?;
+    if (id == null) continue;
+    mergedContactsMap[id] ??= {};
+    mergeMapValues(mergedContactsMap[id]!, contact);
   }
 
   final mergedContacts = <Contact>[];
-
-  // ID -> List of specific info type contacts
-  final contactsToMerge = <String, List<_MutableContact>>{};
-
-  for (final specificInfoContacts in allContacts) {
-    for (final contact in specificInfoContacts) {
-      if (contactsToMerge[contact.id] == null) {
-        contactsToMerge[contact.id] = [];
-      }
-      contactsToMerge[contact.id]!.add(contact);
-    }
-  }
-
-  for (final specificInfoContacts in contactsToMerge.values) {
-    mergedContacts.add(
-      _getContactByMergingContactInfoTypes(specificInfoContacts),
-    );
+  for (final contactMap in mergedContactsMap.values) {
+    final contact = _MutableContact.fromMap(contactMap);
+    mergedContacts.add(contact);
   }
 
   return mergedContacts;
-}
-
-/// Returns a list [Contact] with info merged from all [contacts].
-/// Modifies [contacts] list items in place.
-Contact _getContactByMergingContactInfoTypes(List<_MutableContact> contacts) {
-  assert(contacts.isNotEmpty);
-
-  final result = contacts[0];
-
-  if (contacts.length == 1) {
-    return result;
-  }
-
-  for (final c in contacts.skip(1)) {
-    if (result.id.isEmpty && c.id.isNotEmpty) {
-      result.id = c.id;
-    }
-    if (result.displayName.isEmpty && c.displayName.isNotEmpty) {
-      result.displayName = c.displayName;
-    }
-    if (result.phones.isEmpty && c.phones.isNotEmpty) {
-      result.phones = c.phones;
-    }
-    if (result.emails.isEmpty && c.emails.isNotEmpty) {
-      result.emails = c.emails;
-    }
-    if (result.structuredName == null && c.structuredName != null) {
-      result.structuredName = c.structuredName;
-    }
-    if (result.organization == null && c.organization != null) {
-      result.organization = c.organization;
-    }
-  }
-
-  return result;
 }
