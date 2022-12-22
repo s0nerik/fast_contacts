@@ -33,7 +33,7 @@ class _MyAppState extends State<MyApp> {
     try {
       await Permission.contacts.request();
       final sw = Stopwatch()..start();
-      final contacts = await FastContacts.allContacts;
+      final contacts = await FastContacts.getAllContacts();
       sw.stop();
       _contacts = contacts;
       _text = 'Contacts: ${contacts.length}\nTook: ${sw.elapsedMilliseconds}ms';

@@ -102,17 +102,27 @@ class _MutableContact implements Contact {
     required this.organization,
   });
 
-  factory _MutableContact.fromMap(Map map) => _MutableContact(
+  factory _MutableContact.fromMap(
+    Map map, {
+    List<ContactField> fields = ContactField.values,
+  }) =>
+      _MutableContact(
         id: map['id'] as String,
-        displayName: map['displayName'] as String,
-        phones:
-            (map['phones'] as List).map((map) => Phone.fromMap(map)).toList(),
-        emails:
-            (map['emails'] as List).map((map) => Email.fromMap(map)).toList(),
-        structuredName: map['structuredName'] != null
+        displayName: fields.contains(ContactField.displayName)
+            ? map['displayName'] as String
+            : '',
+        phones: fields.contains(ContactField.phones)
+            ? (map['phones'] as List).map((map) => Phone.fromMap(map)).toList()
+            : [],
+        emails: fields.contains(ContactField.emails)
+            ? (map['emails'] as List).map((map) => Email.fromMap(map)).toList()
+            : [],
+        structuredName: map['structuredName'] != null &&
+                fields.contains(ContactField.structuredName)
             ? StructuredName.fromMap(map['structuredName']!)
             : null,
-        organization: map['organization'] != null
+        organization: map['organization'] != null &&
+                fields.contains(ContactField.organization)
             ? Organization.fromMap(map['organization']!)
             : null,
       );
@@ -157,35 +167,77 @@ enum ContactImageSize {
   fullSize,
 }
 
+enum ContactField {
+  id,
+  displayName,
+  phones,
+  emails,
+  structuredName,
+  organization,
+}
+
+extension _ContactFieldExt on ContactField {
+  String get type {
+    switch (this) {
+      case ContactField.id:
+        return 'id';
+      case ContactField.displayName:
+        return 'displayName';
+      case ContactField.phones:
+        return 'phones';
+      case ContactField.emails:
+        return 'emails';
+      case ContactField.structuredName:
+        return 'structuredName';
+      case ContactField.organization:
+        return 'organization';
+    }
+  }
+
+  bool get hasAndroidSupport {
+    switch (this) {
+      case ContactField.phones:
+      case ContactField.emails:
+      case ContactField.structuredName:
+      case ContactField.organization:
+        return true;
+      default:
+        return false;
+    }
+  }
+}
+
+extension _ContactFieldListExt on List<ContactField> {
+  List<ContactField> get androidSupportedTypes =>
+      where((f) => f.hasAndroidSupport).toList();
+}
+
 class FastContacts {
   static const MethodChannel _channel =
       const MethodChannel('com.github.s0nerik.fast_contacts');
 
-  static Future<List<Contact>> get allContacts async {
+  static Future<List<Contact>> getAllContacts({
+    List<ContactField> fields = ContactField.values,
+  }) async {
     if (Platform.isAndroid) {
-      return _allContactsAndroid;
+      return _allContactsAndroid(fields);
     }
-
     final contacts = await _channel.invokeMethod<List>('getContacts');
-    return contacts?.map((map) => _MutableContact.fromMap(map)).toList() ??
+    return contacts
+            ?.map((map) => _MutableContact.fromMap(map, fields: fields))
+            .toList() ??
         const [];
   }
 
-  static Future<List<Contact>> get _allContactsAndroid async {
-    final specificInfoContacts = await Future.wait([
-      _channel.invokeMethod<List>('getContacts', {
-        'type': 'phones',
-      }).then(_parseMutableContacts),
-      _channel.invokeMethod<List>('getContacts', {
-        'type': 'emails',
-      }).then(_parseMutableContacts),
-      _channel.invokeMethod<List>('getContacts', {
-        'type': 'structuredName',
-      }).then(_parseMutableContacts),
-      _channel.invokeMethod<List>('getContacts', {
-        'type': 'organization',
-      }).then(_parseMutableContacts),
-    ]);
+  static Future<List<Contact>> _allContactsAndroid(
+      List<ContactField> fields) async {
+    final specificInfoContacts = await Future.wait(fields.androidSupportedTypes
+        .map(
+          (e) => _channel.invokeMethod<List>('getContacts', {
+            'type': e.type,
+          }).then(_parseMutableContacts),
+        )
+        .toList());
 
     return _mergeContactsInfo(specificInfoContacts);
   }
