@@ -1,3 +1,7 @@
+## 2.0.0
+
+- "Add labels for Email & Phone for Android & IOS" by @PcolBP
+
 ## 1.2.0
 
 - "Add organization fields" by @arjenfvellinga
