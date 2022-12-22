@@ -1,16 +1,49 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 
 abstract class Contact {
   String get id;
   String get displayName;
-  List<String> get phones;
-  List<String> get emails;
+  List<Phone> get phones;
+  List<Email> get emails;
   StructuredName? get structuredName;
   Organization? get organization;
+}
+
+class Phone {
+  Phone._({
+    required this.number,
+    required this.label,
+  });
+
+  factory Phone.fromMap(Map map) {
+    return Phone._(
+      number: map['number'],
+      label: map['label'],
+    );
+  }
+
+  final String number;
+  final String label;
+}
+
+class Email {
+  Email._({
+    required this.address,
+    required this.label,
+  });
+
+  factory Email.fromMap(Map map) {
+    return Email._(
+      address: map['address'],
+      label: map['label'],
+    );
+  }
+
+  final String address;
+  final String label;
 }
 
 class StructuredName {
@@ -22,8 +55,7 @@ class StructuredName {
     required this.nameSuffix,
   });
 
-  static StructuredName? _fromMap(Map? map) {
-    if (map == null) return null;
+  factory StructuredName.fromMap(Map map) {
     return StructuredName._(
       namePrefix: map['namePrefix'] as String,
       givenName: map['givenName'] as String,
@@ -47,8 +79,7 @@ class Organization {
     required this.jobDescription,
   });
 
-  static Organization? _fromMap(Map? map) {
-    if (map == null) return null;
+  factory Organization.fromMap(Map map) {
     return Organization._(
       company: map['company'] as String,
       department: map['department'] as String,
@@ -74,10 +105,16 @@ class _MutableContact implements Contact {
   factory _MutableContact.fromMap(Map map) => _MutableContact(
         id: map['id'] as String,
         displayName: map['displayName'] as String,
-        phones: (map['phones'] as List).cast<String>(),
-        emails: (map['emails'] as List).cast<String>(),
-        structuredName: StructuredName._fromMap(map['structuredName']),
-        organization: Organization._fromMap(map['organization']),
+        phones:
+            (map['phones'] as List).map((map) => Phone.fromMap(map)).toList(),
+        emails:
+            (map['emails'] as List).map((map) => Email.fromMap(map)).toList(),
+        structuredName: map['structuredName'] != null
+            ? StructuredName.fromMap(map['structuredName']!)
+            : null,
+        organization: map['organization'] != null
+            ? Organization.fromMap(map['organization']!)
+            : null,
       );
 
   @override
@@ -85,9 +122,9 @@ class _MutableContact implements Contact {
   @override
   String displayName;
   @override
-  List<String> phones;
+  List<Phone> phones;
   @override
-  List<String> emails;
+  List<Email> emails;
   @override
   StructuredName? structuredName;
   @override

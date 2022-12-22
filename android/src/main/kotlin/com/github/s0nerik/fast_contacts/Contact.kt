@@ -3,18 +3,38 @@ package com.github.s0nerik.fast_contacts
 data class Contact(
         val id: String,
         val displayName: String,
-        val phones: List<String> = emptyList(),
-        val emails: List<String> = emptyList(),
+        val phones: List<ContactPhone> = emptyList(),
+        val emails: List<ContactEmail> = emptyList(),
         val structuredName: StructuredName? = null,
         var organization: Organization? = null
 ) {
     fun asMap() = mapOf(
             "id" to id,
             "displayName" to displayName,
-            "phones" to phones,
-            "emails" to emails,
+            "phones" to phones.map{ phone -> phone.asMap() },
+            "emails" to emails.map{ email -> email.asMap() },
             "structuredName" to structuredName?.asMap(),
             "organization" to organization?.asMap(),
+    )
+}
+
+data class ContactPhone(
+        val number: String,
+        val label: String
+) {
+   fun asMap() = mapOf(
+        "number" to number,
+        "label" to label
+        )
+}
+
+data class ContactEmail(
+        val address: String,
+        val label: String
+) {
+    fun asMap() = mapOf(
+        "address" to address,
+        "label" to label
     )
 }
 
