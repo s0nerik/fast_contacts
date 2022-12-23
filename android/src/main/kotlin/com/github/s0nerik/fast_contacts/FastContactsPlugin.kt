@@ -106,8 +106,8 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         readTargetInfo(TargetInfo.STRUCTURED_NAME) { projection, cursor ->
             val contactId = cursor.getLong(projection.indexOf(StructuredName.CONTACT_ID))
 
-            val displayName = cursor.getString(projection.indexOf(StructuredName.DISPLAY_NAME))
-                ?: ""
+            val displayName =
+                cursor.getString(projection.indexOf(StructuredName.DISPLAY_NAME)) ?: ""
             val prefix = cursor.getString(projection.indexOf(StructuredName.PREFIX)) ?: ""
             val givenName = cursor.getString(projection.indexOf(StructuredName.GIVEN_NAME)) ?: ""
             val middleName = cursor.getString(projection.indexOf(StructuredName.MIDDLE_NAME)) ?: ""
