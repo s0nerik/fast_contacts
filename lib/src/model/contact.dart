@@ -1,7 +1,6 @@
 class Contact {
   Contact._({
     required this.id,
-    required this.displayName,
     required this.phones,
     required this.emails,
     required this.structuredName,
@@ -11,7 +10,6 @@ class Contact {
   factory Contact.fromMap(Map map) {
     return Contact._(
       id: map['id'] ?? '',
-      displayName: map['displayName'] ?? '',
       phones: (map['phones'] as List).cast<Map>().map(Phone.fromMap).toList(),
       emails: (map['emails'] as List).cast<Map>().map(Email.fromMap).toList(),
       structuredName: map['structuredName'] != null
@@ -24,11 +22,12 @@ class Contact {
   }
 
   final String id;
-  final String displayName;
   final List<Phone> phones;
   final List<Email> emails;
   final StructuredName? structuredName;
   final Organization? organization;
+
+  String get displayName => structuredName?.displayName ?? '';
 }
 
 class Phone {
@@ -67,6 +66,7 @@ class Email {
 
 class StructuredName {
   StructuredName._({
+    required this.displayName,
     required this.namePrefix,
     required this.givenName,
     required this.middleName,
@@ -76,6 +76,7 @@ class StructuredName {
 
   factory StructuredName.fromMap(Map map) {
     return StructuredName._(
+      displayName: map['displayName'] ?? '',
       namePrefix: map['namePrefix'] ?? '',
       givenName: map['givenName'] ?? '',
       middleName: map['middleName'] ?? '',
@@ -84,6 +85,7 @@ class StructuredName {
     );
   }
 
+  final String displayName;
   final String namePrefix;
   final String givenName;
   final String middleName;
