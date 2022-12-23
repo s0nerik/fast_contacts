@@ -2,7 +2,6 @@ package com.github.s0nerik.fast_contacts
 
 data class Contact(
         val id: String,
-        val displayName: String,
         val phones: List<ContactPhone> = emptyList(),
         val emails: List<ContactEmail> = emptyList(),
         val structuredName: StructuredName? = null,
@@ -10,11 +9,18 @@ data class Contact(
 ) {
     fun asMap() = mapOf(
             "id" to id,
-            "displayName" to displayName,
             "phones" to phones.map{ phone -> phone.asMap() },
             "emails" to emails.map{ email -> email.asMap() },
             "structuredName" to structuredName?.asMap(),
             "organization" to organization?.asMap(),
+    )
+
+    fun mergeWith(other: Contact) = Contact(
+            id = id,
+            phones = phones + other.phones,
+            emails = emails + other.emails,
+            structuredName = structuredName ?: other.structuredName,
+            organization = organization ?: other.organization
     )
 }
 
@@ -39,6 +45,7 @@ data class ContactEmail(
 }
 
 data class StructuredName(
+        val displayName: String,
         val namePrefix: String,
         val givenName: String,
         val middleName: String,
@@ -46,6 +53,7 @@ data class StructuredName(
         val nameSuffix: String
 ) {
     fun asMap() = mapOf(
+            "displayName" to displayName,
             "namePrefix" to namePrefix,
             "givenName" to givenName,
             "middleName" to middleName,
