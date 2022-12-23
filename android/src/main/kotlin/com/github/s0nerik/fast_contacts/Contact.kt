@@ -5,7 +5,7 @@ data class Contact(
     val phones: List<ContactPhone> = emptyList(),
     val emails: List<ContactEmail> = emptyList(),
     val structuredName: StructuredName? = null,
-    val organization: Organization? = null
+    val organization: Organization? = null,
 ) {
     fun asMap() = mapOf(
         "id" to id,
@@ -20,17 +20,17 @@ data class Contact(
         phones = phones + other.phones,
         emails = emails + other.emails,
         structuredName = structuredName ?: other.structuredName,
-        organization = organization ?: other.organization
+        organization = organization ?: other.organization,
     )
 }
 
 data class ContactPhone(
     val number: String,
-    val label: String
+    val label: String,
 ) {
     fun asMap() = mapOf(
         "number" to number,
-        "label" to label
+        "label" to label,
     )
 }
 
@@ -40,7 +40,7 @@ data class ContactEmail(
 ) {
     fun asMap() = mapOf(
         "address" to address,
-        "label" to label
+        "label" to label,
     )
 }
 
@@ -50,7 +50,7 @@ data class StructuredName(
     val givenName: String,
     val middleName: String,
     val familyName: String,
-    val nameSuffix: String
+    val nameSuffix: String,
 ) {
     fun asMap() = mapOf(
         "displayName" to displayName,
@@ -58,7 +58,7 @@ data class StructuredName(
         "givenName" to givenName,
         "middleName" to middleName,
         "familyName" to familyName,
-        "nameSuffix" to nameSuffix
+        "nameSuffix" to nameSuffix,
     )
 }
 
