@@ -140,22 +140,17 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
             val label = customLabel ?: getPhoneLabel(type)
 
+            val contactPhone = ContactPhone(
+                number = phone,
+                label = label
+            )
+
             if (contacts.containsKey(contactId)) {
-                (contacts[contactId]!!.phones as MutableList<ContactPhone>).add(
-                    ContactPhone(
-                        number = phone,
-                        label = label
-                    )
-                )
+                (contacts[contactId]!!.phones as MutableList<ContactPhone>).add(contactPhone)
             } else {
                 contacts[contactId] = Contact(
                     id = contactId.toString(),
-                    phones = mutableListOf(
-                        ContactPhone(
-                            number = phone,
-                            label = label
-                        )
-                    )
+                    phones = mutableListOf(contactPhone)
                 )
             }
         }
