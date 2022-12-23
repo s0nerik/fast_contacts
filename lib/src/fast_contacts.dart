@@ -6,66 +6,6 @@ import 'package:flutter/services.dart';
 import 'model/contact.dart';
 import 'util/map_merging.dart';
 
-class _MutableContact implements Contact {
-  _MutableContact({
-    required this.id,
-    required this.displayName,
-    required this.phones,
-    required this.emails,
-    required this.structuredName,
-    required this.organization,
-  });
-
-  factory _MutableContact.fromMap(Map map) => _MutableContact(
-        id: map['id'] as String,
-        displayName: map['displayName'] as String,
-        phones:
-            (map['phones'] as List).map((map) => Phone.fromMap(map)).toList(),
-        emails:
-            (map['emails'] as List).map((map) => Email.fromMap(map)).toList(),
-        structuredName: map['structuredName'] != null
-            ? StructuredName.fromMap(map['structuredName']!)
-            : null,
-        organization: map['organization'] != null
-            ? Organization.fromMap(map['organization']!)
-            : null,
-      );
-
-  @override
-  String id;
-  @override
-  String displayName;
-  @override
-  List<Phone> phones;
-  @override
-  List<Email> emails;
-  @override
-  StructuredName? structuredName;
-  @override
-  Organization? organization;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is _MutableContact &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          displayName == other.displayName &&
-          phones == other.phones &&
-          emails == other.emails &&
-          structuredName == other.structuredName &&
-          organization == other.organization;
-
-  @override
-  int get hashCode =>
-      id.hashCode ^
-      displayName.hashCode ^
-      phones.hashCode ^
-      emails.hashCode ^
-      structuredName.hashCode ^
-      organization.hashCode;
-}
-
 enum ContactImageSize {
   thumbnail,
   fullSize,
@@ -126,7 +66,7 @@ List<Contact> _mergeContactsInfo(
 
   final mergedContacts = <Contact>[];
   for (final contactMap in mergedContactsMap.values) {
-    final contact = _MutableContact.fromMap(contactMap);
+    final contact = Contact.fromMap(contactMap);
     mergedContacts.add(contact);
   }
 
