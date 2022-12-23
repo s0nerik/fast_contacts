@@ -18,26 +18,25 @@ class _MyAppState extends State<MyApp> {
   List<Contact> _contacts = const [];
   String? _text;
 
+  bool _isLoading = false;
+
   final _ctrl = ScrollController();
 
-  @override
-  void initState() {
-    super.initState();
-    initPlatformState();
-  }
-
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    // Platform messages may fail, so we use a try/catch PlatformException.
+  Future<void> loadContacts() async {
     try {
       await Permission.contacts.request();
+      _isLoading = true;
+      if (mounted) setState(() {});
       final sw = Stopwatch()..start();
-      final contacts = await FastContacts.getAllContacts();
+
+      _contacts = await FastContacts.getAllContacts();
       sw.stop();
-      _contacts = contacts;
-      _text = 'Contacts: ${contacts.length}\nTook: ${sw.elapsedMilliseconds}ms';
+      _text =
+          'Contacts: ${_contacts.length}\nTook: ${sw.elapsedMilliseconds}ms';
     } on PlatformException catch (e) {
       _text = 'Failed to get contacts:\n${e.details}';
+    } finally {
+      _isLoading = false;
     }
 
     // If the widget was removed from the tree while the asynchronous platform
@@ -62,8 +61,14 @@ class _MyAppState extends State<MyApp> {
           title: const Text('fast_contacts'),
         ),
         body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(_text ?? ''),
+            TextButton(
+              onPressed: loadContacts,
+              child: Text('Load contacts'),
+            ),
+            if (_isLoading) Center(child: CircularProgressIndicator()),
+            Text(_text ?? '', textAlign: TextAlign.center),
             Expanded(
               child: Scrollbar(
                 controller: _ctrl,
