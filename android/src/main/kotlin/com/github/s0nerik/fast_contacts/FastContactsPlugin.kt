@@ -16,6 +16,7 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.SynchronousQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -28,7 +29,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     private lateinit var handler: Handler
 
     private val contactsExecutor = ThreadPoolExecutor(
-        4, Integer.MAX_VALUE,
+        TargetInfo.values().size + 1, Integer.MAX_VALUE,
         20L, TimeUnit.SECONDS,
         SynchronousQueue()
     )
@@ -49,16 +50,32 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
-            "getContacts" -> {
-                val args = call.arguments as Map<String, String>
-                val type = args["type"]
-                if (type == null) {
-                    result.error("", "getContacts: 'type' must be specified", null)
-                    return
+            "getAllContacts" -> {
+                val args = call.arguments as Map<String, Any>
+                val fieldStrings = args["fields"] as List<String>
+                val fields = fieldStrings.map(TargetInfo::fromString)
+
+                val partialContacts = mutableListOf<Contact>()
+                val fetchCompletionLatch = CountDownLatch(fields.size)
+                fields.map { targetInfo ->
+                    contactsExecutor.execute {
+                        try {
+                            val contacts = fetchPartialContacts(targetInfo)
+                            partialContacts.addAll(contacts)
+                        } finally {
+                            fetchCompletionLatch.countDown()
+                        }
+                    }
                 }
                 contactsExecutor.execute {
+                    fetchCompletionLatch.await()
                     withResultDispatcher(result) {
-                        getContactsInfoJsonMap(TargetInfo.fromString(type))
+                        val mergedContacts = partialContacts
+                            .groupBy { it.id }
+                            .mapValues { (_, contacts) -> contacts.reduce(Contact::mergeWith) }
+                            .values
+                            .sortedBy { it.id }
+                        mergedContacts.map(Contact::asMap)
                     }
                 }
             }
@@ -93,13 +110,13 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         return ViewModelStore()
     }
 
-    private fun getContactsInfoJsonMap(targetInfo: TargetInfo): List<Map<String, Any?>> {
+    private fun fetchPartialContacts(targetInfo: TargetInfo): Collection<Contact> {
         return when (targetInfo) {
             TargetInfo.PHONES -> readPhonesInfo()
             TargetInfo.EMAILS -> readEmailsInfo()
             TargetInfo.STRUCTURED_NAME -> readStructuredNameInfo()
             TargetInfo.ORGANIZATION -> readOrganizationInfo()
-        }.values.map(Contact::asMap)
+        }.values
     }
 
     private fun readStructuredNameInfo(): Map<Long, Contact> {
