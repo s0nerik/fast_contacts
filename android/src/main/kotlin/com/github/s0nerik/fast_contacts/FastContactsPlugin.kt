@@ -6,7 +6,8 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Handler
 import android.provider.ContactsContract
-import android.provider.ContactsContract.CommonDataKinds.*
+import android.provider.ContactsContract.CommonDataKinds.Phone
+import android.provider.ContactsContract.CommonDataKinds.Email
 import android.provider.ContactsContract.CommonDataKinds.Organization
 import android.provider.ContactsContract.CommonDataKinds.StructuredName
 import androidx.core.content.ContentResolverCompat
@@ -193,7 +194,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             val type = cursor.getInt(projection.indexOf(Email.TYPE))
             val customLabel = cursor.getString(projection.indexOf(Email.LABEL))
 
-            val label = customLabel ?: getAddressLabel(type)
+            val label = customLabel ?: getEmailAddressLabel(type)
 
             val contactEmail = ContactEmail(
                 address = email,
@@ -212,12 +213,12 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         return contacts
     }
 
-    private fun getAddressLabel(type: Int): String {
+    private fun getEmailAddressLabel(type: Int): String {
         return when (type) {
-            StructuredPostal.TYPE_HOME -> "home"
-            StructuredPostal.TYPE_OTHER -> "other"
-            StructuredPostal.TYPE_WORK -> "work"
-            StructuredPostal.TYPE_CUSTOM -> "custom"
+            Email.TYPE_HOME -> "home"
+            Email.TYPE_OTHER -> "other"
+            Email.TYPE_WORK -> "work"
+            Email.TYPE_CUSTOM -> "custom"
             else -> ""
         }
     }
