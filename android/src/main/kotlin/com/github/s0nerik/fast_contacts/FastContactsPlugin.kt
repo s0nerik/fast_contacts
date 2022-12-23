@@ -27,19 +27,20 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     private lateinit var handler: Handler
 
     private val contactsExecutor = ThreadPoolExecutor(
-            4, Integer.MAX_VALUE,
-            20L, TimeUnit.SECONDS,
-            SynchronousQueue()
+        4, Integer.MAX_VALUE,
+        20L, TimeUnit.SECONDS,
+        SynchronousQueue()
     )
 
     private val imageExecutor = ThreadPoolExecutor(
-            4, Integer.MAX_VALUE,
-            20L, TimeUnit.SECONDS,
-            SynchronousQueue()
+        4, Integer.MAX_VALUE,
+        20L, TimeUnit.SECONDS,
+        SynchronousQueue()
     )
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "com.github.s0nerik.fast_contacts")
+        channel =
+            MethodChannel(flutterPluginBinding.binaryMessenger, "com.github.s0nerik.fast_contacts")
         handler = Handler(flutterPluginBinding.applicationContext.mainLooper)
         contentResolver = flutterPluginBinding.applicationContext.contentResolver
         channel.setMethodCallHandler(this)
@@ -105,7 +106,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         readTargetInfo(TargetInfo.STRUCTURED_NAME) { projection, cursor ->
             val contactId = cursor.getLong(projection.indexOf(StructuredName.CONTACT_ID))
             val displayName = cursor.getString(projection.indexOf(StructuredName.DISPLAY_NAME))
-                    ?: ""
+                ?: ""
 
             val prefix = cursor.getString(projection.indexOf(StructuredName.PREFIX)) ?: ""
             val givenName = cursor.getString(projection.indexOf(StructuredName.GIVEN_NAME)) ?: ""
@@ -114,15 +115,15 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             val suffix = cursor.getString(projection.indexOf(StructuredName.SUFFIX)) ?: ""
 
             contacts[contactId] = Contact(
-                    id = contactId.toString(),
-                    displayName = displayName,
-                    structuredName = StructuredName(
-                            namePrefix = prefix,
-                            givenName = givenName,
-                            middleName = middleName,
-                            familyName = familyName,
-                            nameSuffix = suffix
-                    ),
+                id = contactId.toString(),
+                displayName = displayName,
+                structuredName = StructuredName(
+                    namePrefix = prefix,
+                    givenName = givenName,
+                    middleName = middleName,
+                    familyName = familyName,
+                    nameSuffix = suffix,
+                ),
             )
         }
         return contacts
@@ -140,18 +141,22 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             val label = customLabel ?: getPhoneLabel(type)
 
             if (contacts.containsKey(contactId)) {
-                (contacts[contactId]!!.phones as MutableList<ContactPhone>).add(ContactPhone(
-                    number = phone,
-                    label = label
-                ))
+                (contacts[contactId]!!.phones as MutableList<ContactPhone>).add(
+                    ContactPhone(
+                        number = phone,
+                        label = label
+                    )
+                )
             } else {
                 contacts[contactId] = Contact(
-                        id = contactId.toString(),
-                        displayName = displayName,
-                        phones = mutableListOf(ContactPhone(
+                    id = contactId.toString(),
+                    displayName = displayName,
+                    phones = mutableListOf(
+                        ContactPhone(
                             number = phone,
                             label = label
-                        ))
+                        )
+                    )
                 )
             }
         }
@@ -197,18 +202,22 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             val label = customLabel ?: getAddressLabel(type)
 
             if (contacts.containsKey(contactId)) {
-                (contacts[contactId]!!.emails as MutableList<ContactEmail>).add(ContactEmail(
-                    address = email,
-                    label = label
-                ))
+                (contacts[contactId]!!.emails as MutableList<ContactEmail>).add(
+                    ContactEmail(
+                        address = email,
+                        label = label
+                    )
+                )
             } else {
                 contacts[contactId] = Contact(
-                        id = contactId.toString(),
-                        displayName = displayName,
-                        emails = mutableListOf(ContactEmail(
+                    id = contactId.toString(),
+                    displayName = displayName,
+                    emails = mutableListOf(
+                        ContactEmail(
                             address = email,
                             label = label
-                        ))
+                        )
+                    )
                 )
             }
         }
@@ -232,7 +241,8 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             val displayName = cursor.getString(projection.indexOf(Organization.DISPLAY_NAME)) ?: ""
             val company = cursor.getString(projection.indexOf(Organization.COMPANY)) ?: ""
             val department = cursor.getString(projection.indexOf(Organization.DEPARTMENT)) ?: ""
-            val jobDescription = cursor.getString(projection.indexOf(Organization.JOB_DESCRIPTION)) ?: ""
+            val jobDescription =
+                cursor.getString(projection.indexOf(Organization.JOB_DESCRIPTION)) ?: ""
 
             if (!contacts.containsKey(contactId)) {
                 contacts[contactId] = Contact(
@@ -250,9 +260,19 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         return contacts
     }
 
-    private fun readTargetInfo(targetInfo: TargetInfo, onData: (projection: Array<String>, cursor: Cursor) -> Unit) {
-        val cursor = ContentResolverCompat.query(contentResolver, CONTENT_URI[targetInfo],
-                PROJECTION[targetInfo], SELECTION[targetInfo], SELECTION_ARGS[targetInfo], SORT_ORDER[targetInfo], null)
+    private fun readTargetInfo(
+        targetInfo: TargetInfo,
+        onData: (projection: Array<String>, cursor: Cursor) -> Unit
+    ) {
+        val cursor = ContentResolverCompat.query(
+            contentResolver,
+            CONTENT_URI[targetInfo],
+            PROJECTION[targetInfo],
+            SELECTION[targetInfo],
+            SELECTION_ARGS[targetInfo],
+            SORT_ORDER[targetInfo],
+            null
+        )
         cursor?.use {
             while (!cursor.isClosed && cursor.moveToNext()) {
                 onData(PROJECTION[targetInfo]!!, cursor)
@@ -261,21 +281,24 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     }
 
     private fun getContactThumbnail(contactId: Long): ByteArray? {
-        val contactUri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId)
+        val contactUri =
+            ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId)
         return contentResolver.query(
-                Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY),
-                arrayOf(ContactsContract.Contacts.Photo.PHOTO),
-                null,
-                null,
-                null
+            Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY),
+            arrayOf(ContactsContract.Contacts.Photo.PHOTO),
+            null,
+            null,
+            null
         )?.use { cursor ->
             if (cursor.moveToNext()) cursor.getBlob(0) else null
         }
     }
 
     private fun getContactImage(contactId: Long): ByteArray? {
-        val contactUri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId)
-        val displayPhotoUri = Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.DISPLAY_PHOTO)
+        val contactUri =
+            ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId)
+        val displayPhotoUri =
+            Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.DISPLAY_PHOTO)
 
         return contentResolver.openAssetFileDescriptor(displayPhotoUri, "r")?.use { fd ->
             fd.createInputStream().use {
@@ -299,55 +322,55 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
     companion object {
         private val CONTENT_URI = mapOf(
-                TargetInfo.PHONES to Phone.CONTENT_URI,
-                TargetInfo.EMAILS to Email.CONTENT_URI,
-                TargetInfo.STRUCTURED_NAME to ContactsContract.Data.CONTENT_URI,
-                TargetInfo.ORGANIZATION to ContactsContract.Data.CONTENT_URI
+            TargetInfo.PHONES to Phone.CONTENT_URI,
+            TargetInfo.EMAILS to Email.CONTENT_URI,
+            TargetInfo.STRUCTURED_NAME to ContactsContract.Data.CONTENT_URI,
+            TargetInfo.ORGANIZATION to ContactsContract.Data.CONTENT_URI
         )
         private val PROJECTION = mapOf(
-                TargetInfo.PHONES to arrayOf(
-                        Phone.CONTACT_ID,
-                        Phone.DISPLAY_NAME,
-                        Phone.NUMBER,
-                        Phone.TYPE,
-                        Phone.LABEL
-                ),
-                TargetInfo.EMAILS to arrayOf(
-                        Email.CONTACT_ID,
-                        Email.DISPLAY_NAME,
-                        Email.ADDRESS,
-                        Email.TYPE,
-                        Email.LABEL
-                ),
-                TargetInfo.STRUCTURED_NAME to arrayOf(
-                        StructuredName.CONTACT_ID,
-                        StructuredName.DISPLAY_NAME,
-                        StructuredName.PREFIX,
-                        StructuredName.GIVEN_NAME,
-                        StructuredName.MIDDLE_NAME,
-                        StructuredName.FAMILY_NAME,
-                        StructuredName.SUFFIX
-                ),
-                TargetInfo.ORGANIZATION to arrayOf(
-                    Organization.CONTACT_ID,
-                    Organization.DISPLAY_NAME,
-                    Organization.MIMETYPE,
-                    Organization.COMPANY,
-                    Organization.DEPARTMENT,
-                    Organization.JOB_DESCRIPTION,
-                )
+            TargetInfo.PHONES to arrayOf(
+                Phone.CONTACT_ID,
+                Phone.DISPLAY_NAME,
+                Phone.NUMBER,
+                Phone.TYPE,
+                Phone.LABEL
+            ),
+            TargetInfo.EMAILS to arrayOf(
+                Email.CONTACT_ID,
+                Email.DISPLAY_NAME,
+                Email.ADDRESS,
+                Email.TYPE,
+                Email.LABEL
+            ),
+            TargetInfo.STRUCTURED_NAME to arrayOf(
+                StructuredName.CONTACT_ID,
+                StructuredName.DISPLAY_NAME,
+                StructuredName.PREFIX,
+                StructuredName.GIVEN_NAME,
+                StructuredName.MIDDLE_NAME,
+                StructuredName.FAMILY_NAME,
+                StructuredName.SUFFIX
+            ),
+            TargetInfo.ORGANIZATION to arrayOf(
+                Organization.CONTACT_ID,
+                Organization.DISPLAY_NAME,
+                Organization.MIMETYPE,
+                Organization.COMPANY,
+                Organization.DEPARTMENT,
+                Organization.JOB_DESCRIPTION,
+            )
         )
         private val SELECTION = mapOf(
-                TargetInfo.STRUCTURED_NAME to "${ContactsContract.Data.MIMETYPE} = ?"
+            TargetInfo.STRUCTURED_NAME to "${ContactsContract.Data.MIMETYPE} = ?"
         )
         private val SELECTION_ARGS = mapOf(
-                TargetInfo.STRUCTURED_NAME to arrayOf(StructuredName.CONTENT_ITEM_TYPE)
+            TargetInfo.STRUCTURED_NAME to arrayOf(StructuredName.CONTENT_ITEM_TYPE)
         )
         private val SORT_ORDER = mapOf(
-                TargetInfo.PHONES to "${Phone.DISPLAY_NAME} ASC",
-                TargetInfo.EMAILS to "${Email.DISPLAY_NAME} ASC",
-                TargetInfo.STRUCTURED_NAME to "${StructuredName.DISPLAY_NAME} ASC",
-                TargetInfo.ORGANIZATION to "${Organization.DISPLAY_NAME} ASC"
+            TargetInfo.PHONES to "${Phone.DISPLAY_NAME} ASC",
+            TargetInfo.EMAILS to "${Email.DISPLAY_NAME} ASC",
+            TargetInfo.STRUCTURED_NAME to "${StructuredName.DISPLAY_NAME} ASC",
+            TargetInfo.ORGANIZATION to "${Organization.DISPLAY_NAME} ASC"
         )
     }
 }
