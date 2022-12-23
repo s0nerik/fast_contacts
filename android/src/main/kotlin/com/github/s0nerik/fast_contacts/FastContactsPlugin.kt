@@ -31,13 +31,13 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     private val contactsExecutor = ThreadPoolExecutor(
         TargetInfo.values().size + 1, Integer.MAX_VALUE,
         20L, TimeUnit.SECONDS,
-        SynchronousQueue()
+        SynchronousQueue(),
     )
 
     private val imageExecutor = ThreadPoolExecutor(
         4, Integer.MAX_VALUE,
         20L, TimeUnit.SECONDS,
-        SynchronousQueue()
+        SynchronousQueue(),
     )
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -160,7 +160,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
             val contactPhone = ContactPhone(
                 number = phone,
-                label = label
+                label = label,
             )
 
             if (contacts.containsKey(contactId)) {
@@ -168,7 +168,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             } else {
                 contacts[contactId] = Contact(
                     id = contactId.toString(),
-                    phones = mutableListOf(contactPhone)
+                    phones = mutableListOf(contactPhone),
                 )
             }
         }
@@ -215,7 +215,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
             val contactEmail = ContactEmail(
                 address = email,
-                label = label
+                label = label,
             )
 
             if (contacts.containsKey(contactId)) {
@@ -223,7 +223,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             } else {
                 contacts[contactId] = Contact(
                     id = contactId.toString(),
-                    emails = mutableListOf(contactEmail)
+                    emails = mutableListOf(contactEmail),
                 )
             }
         }
@@ -256,7 +256,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                     organization = Organization(
                         company = company,
                         department = department,
-                        jobDescription = jobDescription
+                        jobDescription = jobDescription,
                     )
                 )
             }
@@ -276,7 +276,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             SELECTION[targetInfo],
             SELECTION_ARGS[targetInfo],
             SORT_ORDER[targetInfo],
-            null
+            null,
         )
         cursor?.use {
             while (!cursor.isClosed && cursor.moveToNext()) {
@@ -293,7 +293,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             arrayOf(ContactsContract.Contacts.Photo.PHOTO),
             null,
             null,
-            null
+            null,
         )?.use { cursor ->
             if (cursor.moveToNext()) cursor.getBlob(0) else null
         }
@@ -330,20 +330,20 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             TargetInfo.PHONES to Phone.CONTENT_URI,
             TargetInfo.EMAILS to Email.CONTENT_URI,
             TargetInfo.STRUCTURED_NAME to ContactsContract.Data.CONTENT_URI,
-            TargetInfo.ORGANIZATION to ContactsContract.Data.CONTENT_URI
+            TargetInfo.ORGANIZATION to ContactsContract.Data.CONTENT_URI,
         )
         private val PROJECTION = mapOf(
             TargetInfo.PHONES to arrayOf(
                 Phone.CONTACT_ID,
                 Phone.NUMBER,
                 Phone.TYPE,
-                Phone.LABEL
+                Phone.LABEL,
             ),
             TargetInfo.EMAILS to arrayOf(
                 Email.CONTACT_ID,
                 Email.ADDRESS,
                 Email.TYPE,
-                Email.LABEL
+                Email.LABEL,
             ),
             TargetInfo.STRUCTURED_NAME to arrayOf(
                 StructuredName.CONTACT_ID,
@@ -352,14 +352,14 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 StructuredName.GIVEN_NAME,
                 StructuredName.MIDDLE_NAME,
                 StructuredName.FAMILY_NAME,
-                StructuredName.SUFFIX
+                StructuredName.SUFFIX,
             ),
             TargetInfo.ORGANIZATION to arrayOf(
                 Organization.CONTACT_ID,
                 Organization.COMPANY,
                 Organization.DEPARTMENT,
                 Organization.JOB_DESCRIPTION,
-            )
+            ),
         )
         private val SELECTION = mapOf(
             TargetInfo.STRUCTURED_NAME to "${ContactsContract.Data.MIMETYPE} = ?",
