@@ -196,8 +196,8 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             val contactId = cursor.getLong(projection.indexOf(Email.CONTACT_ID))
             val displayName = cursor.getString(projection.indexOf(Email.DISPLAY_NAME)) ?: ""
             val email = cursor.getString(projection.indexOf(Email.ADDRESS)) ?: ""
-            val type = cursor.getInt(projection.indexOf(Phone.TYPE))
-            val customLabel = cursor.getString(projection.indexOf(Phone.LABEL))
+            val type = cursor.getInt(projection.indexOf(Email.TYPE))
+            val customLabel = cursor.getString(projection.indexOf(Email.LABEL))
 
             val label = customLabel ?: getAddressLabel(type)
 
