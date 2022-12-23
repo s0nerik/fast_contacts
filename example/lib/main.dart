@@ -28,7 +28,6 @@ class _MyAppState extends State<MyApp> {
       _isLoading = true;
       if (mounted) setState(() {});
       final sw = Stopwatch()..start();
-
       _contacts = await FastContacts.getAllContacts();
       sw.stop();
       _text =
@@ -38,12 +37,7 @@ class _MyAppState extends State<MyApp> {
     } finally {
       _isLoading = false;
     }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
     if (!mounted) return;
-
     setState(() {});
   }
 
@@ -65,9 +59,24 @@ class _MyAppState extends State<MyApp> {
           children: [
             TextButton(
               onPressed: loadContacts,
-              child: Text('Load contacts'),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    height: 24,
+                    width: 24,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _isLoading
+                          ? CircularProgressIndicator()
+                          : Icon(Icons.refresh),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('Load contacts'),
+                ],
+              ),
             ),
-            if (_isLoading) Center(child: CircularProgressIndicator()),
             Text(_text ?? '', textAlign: TextAlign.center),
             Expanded(
               child: Scrollbar(
