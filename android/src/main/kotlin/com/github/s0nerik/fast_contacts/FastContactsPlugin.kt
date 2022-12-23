@@ -234,19 +234,15 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             val department = cursor.getString(projection.indexOf(Organization.DEPARTMENT)) ?: ""
             val jobDescription = cursor.getString(projection.indexOf(Organization.JOB_DESCRIPTION)) ?: ""
 
-            val mimeType = cursor.getString(projection.indexOf(Organization.MIMETYPE))
-
             if (!contacts.containsKey(contactId)) {
                 contacts[contactId] = Contact(
                     id = contactId.toString(),
                     displayName = displayName,
-                )
-            }
-            if (mimeType.equals(Organization.CONTENT_ITEM_TYPE)) {
-                contacts[contactId]!!.organization = Organization(
-                    company = company,
-                    department = department,
-                    jobDescription = jobDescription,
+                    organization = Organization(
+                        company = company,
+                        department = department,
+                        jobDescription = jobDescription
+                    )
                 )
             }
         }

@@ -6,7 +6,7 @@ data class Contact(
         val phones: List<ContactPhone> = emptyList(),
         val emails: List<ContactEmail> = emptyList(),
         val structuredName: StructuredName? = null,
-        var organization: Organization? = null
+        val organization: Organization? = null
 ) {
     fun asMap() = mapOf(
             "id" to id,
