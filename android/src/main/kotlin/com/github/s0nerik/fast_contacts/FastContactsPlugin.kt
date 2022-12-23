@@ -105,9 +105,9 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         val contacts = mutableMapOf<Long, Contact>()
         readTargetInfo(TargetInfo.STRUCTURED_NAME) { projection, cursor ->
             val contactId = cursor.getLong(projection.indexOf(StructuredName.CONTACT_ID))
+
             val displayName = cursor.getString(projection.indexOf(StructuredName.DISPLAY_NAME))
                 ?: ""
-
             val prefix = cursor.getString(projection.indexOf(StructuredName.PREFIX)) ?: ""
             val givenName = cursor.getString(projection.indexOf(StructuredName.GIVEN_NAME)) ?: ""
             val middleName = cursor.getString(projection.indexOf(StructuredName.MIDDLE_NAME)) ?: ""
@@ -116,8 +116,8 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
             contacts[contactId] = Contact(
                 id = contactId.toString(),
-                displayName = displayName,
                 structuredName = StructuredName(
+                    displayName = displayName,
                     namePrefix = prefix,
                     givenName = givenName,
                     middleName = middleName,
@@ -133,7 +133,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         val contacts = mutableMapOf<Long, Contact>()
         readTargetInfo(TargetInfo.PHONES) { projection, cursor ->
             val contactId = cursor.getLong(projection.indexOf(Phone.CONTACT_ID))
-            val displayName = cursor.getString(projection.indexOf(Phone.DISPLAY_NAME)) ?: ""
+
             val phone = cursor.getString(projection.indexOf(Phone.NUMBER)) ?: ""
             val type = cursor.getInt(projection.indexOf(Phone.TYPE))
             val customLabel = cursor.getString(projection.indexOf(Phone.LABEL))
@@ -150,7 +150,6 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             } else {
                 contacts[contactId] = Contact(
                     id = contactId.toString(),
-                    displayName = displayName,
                     phones = mutableListOf(
                         ContactPhone(
                             number = phone,
@@ -194,7 +193,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         val contacts = mutableMapOf<Long, Contact>()
         readTargetInfo(TargetInfo.EMAILS) { projection, cursor ->
             val contactId = cursor.getLong(projection.indexOf(Email.CONTACT_ID))
-            val displayName = cursor.getString(projection.indexOf(Email.DISPLAY_NAME)) ?: ""
+
             val email = cursor.getString(projection.indexOf(Email.ADDRESS)) ?: ""
             val type = cursor.getInt(projection.indexOf(Email.TYPE))
             val customLabel = cursor.getString(projection.indexOf(Email.LABEL))
@@ -211,7 +210,6 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             } else {
                 contacts[contactId] = Contact(
                     id = contactId.toString(),
-                    displayName = displayName,
                     emails = mutableListOf(
                         ContactEmail(
                             address = email,
@@ -238,7 +236,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         val contacts = mutableMapOf<Long, Contact>()
         readTargetInfo(TargetInfo.ORGANIZATION) { projection, cursor ->
             val contactId = cursor.getLong(projection.indexOf(Organization.CONTACT_ID))
-            val displayName = cursor.getString(projection.indexOf(Organization.DISPLAY_NAME)) ?: ""
+
             val company = cursor.getString(projection.indexOf(Organization.COMPANY)) ?: ""
             val department = cursor.getString(projection.indexOf(Organization.DEPARTMENT)) ?: ""
             val jobDescription =
@@ -247,7 +245,6 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             if (!contacts.containsKey(contactId)) {
                 contacts[contactId] = Contact(
                     id = contactId.toString(),
-                    displayName = displayName,
                     organization = Organization(
                         company = company,
                         department = department,
@@ -330,14 +327,12 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         private val PROJECTION = mapOf(
             TargetInfo.PHONES to arrayOf(
                 Phone.CONTACT_ID,
-                Phone.DISPLAY_NAME,
                 Phone.NUMBER,
                 Phone.TYPE,
                 Phone.LABEL
             ),
             TargetInfo.EMAILS to arrayOf(
                 Email.CONTACT_ID,
-                Email.DISPLAY_NAME,
                 Email.ADDRESS,
                 Email.TYPE,
                 Email.LABEL
@@ -353,24 +348,24 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             ),
             TargetInfo.ORGANIZATION to arrayOf(
                 Organization.CONTACT_ID,
-                Organization.DISPLAY_NAME,
-                Organization.MIMETYPE,
                 Organization.COMPANY,
                 Organization.DEPARTMENT,
                 Organization.JOB_DESCRIPTION,
             )
         )
         private val SELECTION = mapOf(
-            TargetInfo.STRUCTURED_NAME to "${ContactsContract.Data.MIMETYPE} = ?"
+            TargetInfo.STRUCTURED_NAME to "${ContactsContract.Data.MIMETYPE} = ?",
+            TargetInfo.ORGANIZATION to "${ContactsContract.Data.MIMETYPE} = ?",
         )
         private val SELECTION_ARGS = mapOf(
-            TargetInfo.STRUCTURED_NAME to arrayOf(StructuredName.CONTENT_ITEM_TYPE)
+            TargetInfo.STRUCTURED_NAME to arrayOf(StructuredName.CONTENT_ITEM_TYPE),
+            TargetInfo.ORGANIZATION to arrayOf(Organization.CONTENT_ITEM_TYPE),
         )
         private val SORT_ORDER = mapOf(
             TargetInfo.PHONES to "${Phone.DISPLAY_NAME} ASC",
             TargetInfo.EMAILS to "${Email.DISPLAY_NAME} ASC",
             TargetInfo.STRUCTURED_NAME to "${StructuredName.DISPLAY_NAME} ASC",
-            TargetInfo.ORGANIZATION to "${Organization.DISPLAY_NAME} ASC"
+            TargetInfo.ORGANIZATION to "${Organization.DISPLAY_NAME} ASC",
         )
     }
 }
