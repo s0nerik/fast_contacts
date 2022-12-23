@@ -1,8 +1,10 @@
-// Replaces empty or missing values in map1 with values from map2.
-void mergeMapValues(Map map1, Map map2) {
-  for (final key in map2.keys) {
-    if (!_isEmpty(map2[key]) && _isEmpty(map1[key])) {
-      map1[key] = map2[key];
+extension MapMergeExt on Map {
+  // Replaces empty or missing values in map1 with values from map2.
+  void mergeWith(Map map) {
+    for (final key in map.keys) {
+      if (!_isEmpty(map[key]) && _isEmpty(this[key])) {
+        this[key] = map[key];
+      }
     }
   }
 }

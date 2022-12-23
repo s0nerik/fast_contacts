@@ -61,7 +61,7 @@ List<Contact> _mergeContactsInfo(
     final id = contact['id'] as String?;
     if (id == null) continue;
     mergedContactsMap[id] ??= {};
-    mergeMapValues(mergedContactsMap[id]!, contact);
+    mergedContactsMap[id]!.mergeWith(contact);
   }
 
   final mergedContacts = <Contact>[];
