@@ -1,10 +1,34 @@
-abstract class Contact {
-  String get id;
-  String get displayName;
-  List<Phone> get phones;
-  List<Email> get emails;
-  StructuredName? get structuredName;
-  Organization? get organization;
+class Contact {
+  Contact._({
+    required this.id,
+    required this.displayName,
+    required this.phones,
+    required this.emails,
+    required this.structuredName,
+    required this.organization,
+  });
+
+  factory Contact.fromMap(Map map) {
+    return Contact._(
+      id: map['id'] ?? '',
+      displayName: map['displayName'] ?? '',
+      phones: (map['phones'] as List).cast<Map>().map(Phone.fromMap).toList(),
+      emails: (map['emails'] as List).cast<Map>().map(Email.fromMap).toList(),
+      structuredName: map['structuredName'] != null
+          ? StructuredName.fromMap(map['structuredName']!)
+          : null,
+      organization: map['organization'] != null
+          ? Organization.fromMap(map['organization']!)
+          : null,
+    );
+  }
+
+  final String id;
+  final String displayName;
+  final List<Phone> phones;
+  final List<Email> emails;
+  final StructuredName? structuredName;
+  final Organization? organization;
 }
 
 class Phone {
@@ -15,8 +39,8 @@ class Phone {
 
   factory Phone.fromMap(Map map) {
     return Phone._(
-      number: map['number'],
-      label: map['label'],
+      number: map['number'] ?? '',
+      label: map['label'] ?? '',
     );
   }
 
@@ -32,8 +56,8 @@ class Email {
 
   factory Email.fromMap(Map map) {
     return Email._(
-      address: map['address'],
-      label: map['label'],
+      address: map['address'] ?? '',
+      label: map['label'] ?? '',
     );
   }
 
@@ -52,11 +76,11 @@ class StructuredName {
 
   factory StructuredName.fromMap(Map map) {
     return StructuredName._(
-      namePrefix: map['namePrefix'] as String,
-      givenName: map['givenName'] as String,
-      middleName: map['middleName'] as String,
-      familyName: map['familyName'] as String,
-      nameSuffix: map['nameSuffix'] as String,
+      namePrefix: map['namePrefix'] ?? '',
+      givenName: map['givenName'] ?? '',
+      middleName: map['middleName'] ?? '',
+      familyName: map['familyName'] ?? '',
+      nameSuffix: map['nameSuffix'] ?? '',
     );
   }
 
@@ -76,9 +100,9 @@ class Organization {
 
   factory Organization.fromMap(Map map) {
     return Organization._(
-      company: map['company'] as String,
-      department: map['department'] as String,
-      jobDescription: map['jobDescription'] as String,
+      company: map['company'] ?? '',
+      department: map['department'] ?? '',
+      jobDescription: map['jobDescription'] ?? '',
     );
   }
 
