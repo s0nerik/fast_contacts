@@ -195,22 +195,17 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
             val label = customLabel ?: getAddressLabel(type)
 
+            val contactEmail = ContactEmail(
+                address = email,
+                label = label
+            )
+
             if (contacts.containsKey(contactId)) {
-                (contacts[contactId]!!.emails as MutableList<ContactEmail>).add(
-                    ContactEmail(
-                        address = email,
-                        label = label
-                    )
-                )
+                (contacts[contactId]!!.emails as MutableList<ContactEmail>).add(contactEmail)
             } else {
                 contacts[contactId] = Contact(
                     id = contactId.toString(),
-                    emails = mutableListOf(
-                        ContactEmail(
-                            address = email,
-                            label = label
-                        )
-                    )
+                    emails = mutableListOf(contactEmail)
                 )
             }
         }
