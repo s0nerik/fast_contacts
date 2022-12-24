@@ -37,13 +37,29 @@ class FastContacts {
   static const MethodChannel _channel =
       const MethodChannel('com.github.s0nerik.fast_contacts');
 
+  static Completer<List<Contact>>? _getAllContactsCompleter;
+
   static Future<List<Contact>> getAllContacts({
     List<ContactField> fields = ContactField.values,
   }) async {
-    final result = await _channel.invokeListMethod<Map>('getAllContacts', {
-      'fields': fields.map((e) => e.name).toList(),
-    });
-    return result?.map(Contact.fromMap).toList() ?? const [];
+    if (_getAllContactsCompleter != null) {
+      return _getAllContactsCompleter!.future;
+    }
+
+    _getAllContactsCompleter = Completer();
+    try {
+      final result = await _channel.invokeListMethod<Map>('getAllContacts', {
+        'fields': fields.map((e) => e.name).toList(),
+      });
+      final contacts = result?.map(Contact.fromMap).toList();
+      _getAllContactsCompleter!.complete(contacts);
+      return contacts ?? const [];
+    } catch (e) {
+      _getAllContactsCompleter!.completeError(e);
+      rethrow;
+    } finally {
+      _getAllContactsCompleter = null;
+    }
   }
 
   static Future<Uint8List?> getContactImage(
