@@ -16,11 +16,7 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.SynchronousQueue
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 
 private enum class ContactField {
     // Name-related
@@ -112,11 +108,9 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     private lateinit var contentResolver: ContentResolver
     private lateinit var handler: Handler
 
-    private val contactsExecutor = ThreadPoolExecutor(
-        ContactPart.values().size + 1, Integer.MAX_VALUE,
-        20L, TimeUnit.SECONDS,
-        SynchronousQueue(),
-    )
+    private val allContactsExecutor = Executors.newSingleThreadExecutor()
+    private val allContactsPartExecutors =
+        ContactPart.values().associateWith { Executors.newSingleThreadExecutor() }
 
     private val imageExecutor = ThreadPoolExecutor(
         4, Integer.MAX_VALUE,
@@ -145,7 +139,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 val partialContacts = ConcurrentHashMap<ContactPart, Collection<Contact>>()
                 val fetchCompletionLatch = CountDownLatch(contactParts.size)
                 contactParts.map { part ->
-                    contactsExecutor.execute {
+                    allContactsPartExecutors[part]!!.execute {
                         try {
                             val contacts = fetchPartialContacts(part, fields)
                             partialContacts[part] = contacts
@@ -154,7 +148,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                         }
                     }
                 }
-                contactsExecutor.execute {
+                allContactsExecutor.execute {
                     fetchCompletionLatch.await()
                     withResultDispatcher(result) {
                         val mergedContacts = mutableMapOf<String, Contact>()
@@ -228,25 +222,17 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
     private fun readStructuredNameInfo(fields: Set<ContactField>): Map<Long, Contact> {
         val contacts = mutableMapOf<Long, Contact>()
-        readTargetInfo(ContactPart.STRUCTURED_NAME, fields) { projection, cursor ->
-            val contactId = cursor.getLong(projection, StructuredName.CONTACT_ID)!!
-
-            val displayName = cursor.getString(projection, StructuredName.DISPLAY_NAME)
-            val prefix = cursor.getString(projection, StructuredName.PREFIX)
-            val givenName = cursor.getString(projection, StructuredName.GIVEN_NAME)
-            val middleName = cursor.getString(projection, StructuredName.MIDDLE_NAME)
-            val familyName = cursor.getString(projection, StructuredName.FAMILY_NAME)
-            val suffix = cursor.getString(projection, StructuredName.SUFFIX)
-
+        readTargetInfo(ContactPart.STRUCTURED_NAME, fields) { cursor ->
+            val contactId = cursor.getLong(StructuredName.CONTACT_ID)!!
             contacts[contactId] = Contact(
                 id = contactId.toString(),
                 structuredName = StructuredName(
-                    displayName = displayName ?: "",
-                    namePrefix = prefix ?: "",
-                    givenName = givenName ?: "",
-                    middleName = middleName ?: "",
-                    familyName = familyName ?: "",
-                    nameSuffix = suffix ?: "",
+                    displayName = cursor.getString(StructuredName.DISPLAY_NAME) ?: "",
+                    namePrefix = cursor.getString(StructuredName.PREFIX) ?: "",
+                    givenName = cursor.getString(StructuredName.GIVEN_NAME) ?: "",
+                    middleName = cursor.getString(StructuredName.MIDDLE_NAME) ?: "",
+                    familyName = cursor.getString(StructuredName.FAMILY_NAME) ?: "",
+                    nameSuffix = cursor.getString(StructuredName.SUFFIX) ?: "",
                 ),
             )
         }
@@ -255,16 +241,13 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
     private fun readPhonesInfo(fields: Set<ContactField>): Map<Long, Contact> {
         val contacts = mutableMapOf<Long, Contact>()
-        readTargetInfo(ContactPart.PHONES, fields) { projection, cursor ->
-            val contactId = cursor.getLong(projection, Phone.CONTACT_ID)!!
-
-            val number = cursor.getString(projection, Phone.NUMBER)
-            val label = cursor.getString(projection, Phone.LABEL)
-                ?: cursor.getInt(projection, Phone.TYPE)?.let(::getPhoneLabel)
-
+        readTargetInfo(ContactPart.PHONES, fields) { cursor ->
+            val contactId = cursor.getLong(Phone.CONTACT_ID)!!
             val contactPhone = ContactPhone(
-                number = number ?: "",
-                label = label ?: "",
+                number = cursor.getString(Phone.NUMBER) ?: "",
+                label = cursor.getString(Phone.LABEL)
+                    ?: cursor.getInt(Phone.TYPE)?.let(::getPhoneLabel)
+                    ?: "",
             )
 
             if (contacts.containsKey(contactId)) {
@@ -308,16 +291,13 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
     private fun readEmailsInfo(fields: Set<ContactField>): Map<Long, Contact> {
         val contacts = mutableMapOf<Long, Contact>()
-        readTargetInfo(ContactPart.EMAILS, fields) { projection, cursor ->
-            val contactId = cursor.getLong(projection, Email.CONTACT_ID)!!
-
-            val email = cursor.getString(projection, Email.ADDRESS)
-            val label = cursor.getString(projection, Email.LABEL)
-                ?: cursor.getInt(projection, Email.TYPE)?.let(::getEmailAddressLabel)
-
+        readTargetInfo(ContactPart.EMAILS, fields) { cursor ->
+            val contactId = cursor.getLong(Email.CONTACT_ID)!!
             val contactEmail = ContactEmail(
-                address = email ?: "",
-                label = label ?: "",
+                address = cursor.getString(Email.ADDRESS) ?: "",
+                label = cursor.getString(Email.LABEL)
+                    ?: cursor.getInt(Email.TYPE)?.let(::getEmailAddressLabel)
+                    ?: "",
             )
 
             if (contacts.containsKey(contactId)) {
@@ -344,30 +324,24 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
     private fun readOrganizationInfo(fields: Set<ContactField>): Map<Long, Contact> {
         val contacts = mutableMapOf<Long, Contact>()
-        readTargetInfo(ContactPart.ORGANIZATION, fields) { projection, cursor ->
-            val contactId = cursor.getLong(projection, Organization.CONTACT_ID)!!
-
-            val company = cursor.getString(projection, Organization.COMPANY)
-            val department = cursor.getString(projection, Organization.DEPARTMENT)
-            val jobDescription = cursor.getString(projection, Organization.JOB_DESCRIPTION)
-
+        readTargetInfo(ContactPart.ORGANIZATION, fields) { cursor ->
+            val contactId = cursor.getLong(Organization.CONTACT_ID)!!
             contacts[contactId] = Contact(
                 id = contactId.toString(),
                 organization = Organization(
-                    company = company ?: "",
-                    department = department ?: "",
-                    jobDescription = jobDescription ?: "",
+                    company = cursor.getString(Organization.COMPANY) ?: "",
+                    department = cursor.getString(Organization.DEPARTMENT) ?: "",
+                    jobDescription = cursor.getString(Organization.JOB_DESCRIPTION) ?: "",
                 )
             )
         }
-
         return contacts
     }
 
     private fun readTargetInfo(
         targetInfo: ContactPart,
         fields: Set<ContactField>,
-        onData: (projection: Array<String>, cursor: Cursor) -> Unit
+        onData: (cursor: Cursor) -> Unit
     ) {
         val fieldNames = fields.map { it.toProjectionStrings() }.flatten().toMutableList()
         fieldNames.add(0, CONTACT_ID_FIELDS[targetInfo]!!)
@@ -384,7 +358,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         )
         cursor?.use {
             while (!cursor.isClosed && cursor.moveToNext()) {
-                onData(projection, cursor)
+                onData(cursor)
             }
         }
     }
@@ -468,10 +442,14 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             ),
         )
         private val SELECTION = mapOf(
+            ContactPart.PHONES to "${Phone.MIMETYPE} = ?",
+            ContactPart.EMAILS to "${Email.MIMETYPE} = ?",
             ContactPart.STRUCTURED_NAME to "${StructuredName.MIMETYPE} = ?",
             ContactPart.ORGANIZATION to "${Organization.MIMETYPE} = ?",
         )
         private val SELECTION_ARGS = mapOf(
+            ContactPart.PHONES to arrayOf(Phone.CONTENT_ITEM_TYPE),
+            ContactPart.EMAILS to arrayOf(Email.CONTENT_ITEM_TYPE),
             ContactPart.STRUCTURED_NAME to arrayOf(StructuredName.CONTENT_ITEM_TYPE),
             ContactPart.ORGANIZATION to arrayOf(Organization.CONTENT_ITEM_TYPE),
         )
@@ -484,26 +462,26 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     }
 }
 
-fun Cursor.getString(projection: Array<String>, field: String): String? {
-    val columnIndex = projection.indexOf(field)
-    if (columnIndex < 0) {
+fun Cursor.getString(col: String): String? {
+    val index = getColumnIndex(col)
+    if (index < 0) {
         return null
     }
-    return getString(columnIndex)
+    return getString(index)
 }
 
-fun Cursor.getInt(projection: Array<String>, field: String): Int? {
-    val columnIndex = projection.indexOf(field)
-    if (columnIndex < 0) {
+fun Cursor.getInt(col: String): Int? {
+    val index = getColumnIndex(col)
+    if (index < 0) {
         return null
     }
-    return getInt(columnIndex)
+    return getInt(index)
 }
 
-fun Cursor.getLong(projection: Array<String>, field: String): Long? {
-    val columnIndex = projection.indexOf(field)
-    if (columnIndex < 0) {
+fun Cursor.getLong(col: String): Long? {
+    val index = getColumnIndex(col)
+    if (index < 0) {
         return null
     }
-    return getLong(columnIndex)
+    return getLong(index)
 }
