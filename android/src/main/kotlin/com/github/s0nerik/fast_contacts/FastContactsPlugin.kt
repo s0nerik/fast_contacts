@@ -16,6 +16,7 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.SynchronousQueue
 import java.util.concurrent.ThreadPoolExecutor
@@ -43,20 +44,20 @@ private enum class ContactField {
     EMAIL_ADDRESSES,
     EMAIL_LABELS;
 
-    fun toProjectionString(): String = when (this) {
-        DISPLAY_NAME -> StructuredName.DISPLAY_NAME
-        NAME_PREFIX -> StructuredName.PREFIX
-        GIVEN_NAME -> StructuredName.GIVEN_NAME
-        MIDDLE_NAME -> StructuredName.MIDDLE_NAME
-        FAMILY_NAME -> StructuredName.FAMILY_NAME
-        NAME_SUFFIX -> StructuredName.SUFFIX
-        COMPANY -> Organization.COMPANY
-        DEPARTMENT -> Organization.DEPARTMENT
-        JOB_DESCRIPTION -> Organization.TITLE
-        PHONE_NUMBERS -> Phone.NUMBER
-        PHONE_LABELS -> Phone.LABEL
-        EMAIL_ADDRESSES -> Email.ADDRESS
-        EMAIL_LABELS -> Email.LABEL
+    fun toProjectionStrings(): Set<String> = when (this) {
+        DISPLAY_NAME -> setOf(StructuredName.DISPLAY_NAME)
+        NAME_PREFIX -> setOf(StructuredName.PREFIX)
+        GIVEN_NAME -> setOf(StructuredName.GIVEN_NAME)
+        MIDDLE_NAME -> setOf(StructuredName.MIDDLE_NAME)
+        FAMILY_NAME -> setOf(StructuredName.FAMILY_NAME)
+        NAME_SUFFIX -> setOf(StructuredName.SUFFIX)
+        COMPANY -> setOf(Organization.COMPANY)
+        DEPARTMENT -> setOf(Organization.DEPARTMENT)
+        JOB_DESCRIPTION -> setOf(Organization.TITLE)
+        PHONE_NUMBERS -> setOf(Phone.NUMBER)
+        PHONE_LABELS -> setOf(Phone.TYPE, Phone.LABEL)
+        EMAIL_ADDRESSES -> setOf(Email.ADDRESS)
+        EMAIL_LABELS -> setOf(Phone.TYPE, Email.LABEL)
     }
 
     companion object {
@@ -123,6 +124,8 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         SynchronousQueue(),
     )
 
+    private var allContacts: List<Contact> = emptyList()
+
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel =
             MethodChannel(flutterPluginBinding.binaryMessenger, "com.github.s0nerik.fast_contacts")
@@ -133,19 +136,19 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
-            "getAllContacts" -> {
+            "fetchAllContacts" -> {
                 val args = call.arguments as Map<String, Any>
                 val fieldStrings = args["fields"] as List<String>
                 val fields = fieldStrings.map(ContactField::fromString).toSet()
                 val contactParts = ContactPart.fromFields(fields)
 
-                val partialContacts = mutableListOf<Contact>()
+                val partialContacts = ConcurrentHashMap<ContactPart, Collection<Contact>>()
                 val fetchCompletionLatch = CountDownLatch(contactParts.size)
                 contactParts.map { part ->
                     contactsExecutor.execute {
                         try {
                             val contacts = fetchPartialContacts(part, fields)
-                            partialContacts.addAll(contacts)
+                            partialContacts[part] = contacts
                         } finally {
                             fetchCompletionLatch.countDown()
                         }
@@ -154,14 +157,31 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 contactsExecutor.execute {
                     fetchCompletionLatch.await()
                     withResultDispatcher(result) {
-                        val mergedContacts = partialContacts
-                            .groupBy { it.id }
-                            .mapValues { (_, contacts) -> contacts.reduce(Contact::mergeWith) }
-                            .values
-                            .sortedBy { it.id }
-                        mergedContacts.map(Contact::asMap)
+                        val mergedContacts = mutableMapOf<String, Contact>()
+                        for (part in partialContacts.values.flatten()) {
+                            val existing = mergedContacts[part.id]
+                            if (existing == null) {
+                                mergedContacts[part.id] = part
+                            } else {
+                                existing.mergeWith(part)
+                            }
+                        }
+                        allContacts = mergedContacts.values.toList()
+                        allContacts.size
                     }
                 }
+            }
+            "getAllContactsPage" -> {
+                val args = call.arguments as Map<String, Any>
+                val from = args["from"] as Int
+                val to = args["to"] as Int
+
+                val page = allContacts.subList(from, to).map(Contact::asMap)
+                result.success(page)
+            }
+            "clearFetchedContacts" -> {
+                allContacts = emptyList()
+                result.success(null)
             }
             "getContactImage" -> {
                 val args = call.arguments as Map<String, String>
@@ -351,11 +371,9 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         fields: Set<ContactField>,
         onData: (projection: Array<String>, cursor: Cursor) -> Unit
     ) {
-        val fieldNames = fields.map { it.toProjectionString() }.toSet()
-
-        val filteredProjectionFields = PROJECTION[targetInfo]!!.filter { fieldNames.contains(it) }.toMutableList()
-        filteredProjectionFields.add(0, CONTACT_ID_FIELDS[targetInfo]!!)
-        val projection = filteredProjectionFields.toTypedArray()
+        val fieldNames = fields.map { it.toProjectionStrings() }.flatten().toMutableList()
+        fieldNames.add(0, CONTACT_ID_FIELDS[targetInfo]!!)
+        val projection = fieldNames.toTypedArray()
 
         val cursor = ContentResolverCompat.query(
             contentResolver,
@@ -452,8 +470,8 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             ),
         )
         private val SELECTION = mapOf(
-            ContactPart.STRUCTURED_NAME to "${ContactsContract.Data.MIMETYPE} = ?",
-            ContactPart.ORGANIZATION to "${ContactsContract.Data.MIMETYPE} = ?",
+            ContactPart.STRUCTURED_NAME to "${StructuredName.MIMETYPE} = ?",
+            ContactPart.ORGANIZATION to "${Organization.MIMETYPE} = ?",
         )
         private val SELECTION_ARGS = mapOf(
             ContactPart.STRUCTURED_NAME to arrayOf(StructuredName.CONTENT_ITEM_TYPE),
