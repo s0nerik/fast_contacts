@@ -57,7 +57,7 @@ private enum class ContactField {
         PHONE_NUMBERS -> setOf(Phone.NUMBER)
         PHONE_LABELS -> setOf(Phone.TYPE, Phone.LABEL)
         EMAIL_ADDRESSES -> setOf(Email.ADDRESS)
-        EMAIL_LABELS -> setOf(Phone.TYPE, Email.LABEL)
+        EMAIL_LABELS -> setOf(Email.TYPE, Email.LABEL)
     }
 
     companion object {
@@ -351,16 +351,14 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             val department = cursor.getString(projection, Organization.DEPARTMENT)
             val jobDescription = cursor.getString(projection, Organization.JOB_DESCRIPTION)
 
-            if (!contacts.containsKey(contactId)) {
-                contacts[contactId] = Contact(
-                    id = contactId.toString(),
-                    organization = Organization(
-                        company = company ?: "",
-                        department = department ?: "",
-                        jobDescription = jobDescription ?: "",
-                    )
+            contacts[contactId] = Contact(
+                id = contactId.toString(),
+                organization = Organization(
+                    company = company ?: "",
+                    department = department ?: "",
+                    jobDescription = jobDescription ?: "",
                 )
-            }
+            )
         }
 
         return contacts
