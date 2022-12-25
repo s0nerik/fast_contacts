@@ -79,6 +79,42 @@ private enum class ContactField {
 private enum class ContactPart {
     PHONES, EMAILS, STRUCTURED_NAME, ORGANIZATION;
 
+    val contentUri: Uri
+        get() = when (this) {
+                PHONES -> Phone.CONTENT_URI
+                EMAILS -> Email.CONTENT_URI
+                STRUCTURED_NAME -> ContactsContract.Data.CONTENT_URI
+                ORGANIZATION -> ContactsContract.Data.CONTENT_URI
+            }
+    val contactIdColumn: String
+        get() = when(this) {
+            PHONES -> Phone.CONTACT_ID
+            EMAILS -> Email.CONTACT_ID
+            STRUCTURED_NAME -> StructuredName.CONTACT_ID
+            ORGANIZATION -> Organization.CONTACT_ID
+        }
+    val selection: String
+        get() = when(this) {
+            PHONES -> "${Phone.MIMETYPE} = ?"
+            EMAILS -> "${Email.MIMETYPE} = ?"
+            STRUCTURED_NAME -> "${StructuredName.MIMETYPE} = ?"
+            ORGANIZATION -> "${Organization.MIMETYPE} = ?"
+        }
+    val selectionArgs: Array<String>
+        get() = when(this) {
+            PHONES -> arrayOf(Phone.CONTENT_ITEM_TYPE)
+            EMAILS -> arrayOf(Email.CONTENT_ITEM_TYPE)
+            STRUCTURED_NAME -> arrayOf(StructuredName.CONTENT_ITEM_TYPE)
+            ORGANIZATION -> arrayOf(Organization.CONTENT_ITEM_TYPE)
+        }
+    val sortOrder: String
+        get() = when(this) {
+            PHONES -> "${Phone.CONTACT_ID} ASC"
+            EMAILS -> "${Email.CONTACT_ID} ASC"
+            STRUCTURED_NAME -> "${StructuredName.CONTACT_ID} ASC"
+            ORGANIZATION -> "${Organization.CONTACT_ID} ASC"
+        }
+
     companion object {
         fun fromFields(fields: Set<ContactField>): Set<ContactPart> {
             return fields.map { field ->
@@ -339,21 +375,21 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     }
 
     private fun readTargetInfo(
-        targetInfo: ContactPart,
+        contactPart: ContactPart,
         fields: Set<ContactField>,
         onData: (cursor: Cursor) -> Unit
     ) {
         val fieldNames = fields.map { it.toProjectionStrings() }.flatten().toMutableList()
-        fieldNames.add(0, CONTACT_ID_FIELDS[targetInfo]!!)
+        fieldNames.add(0, contactPart.contactIdColumn)
         val projection = fieldNames.toTypedArray()
 
         val cursor = ContentResolverCompat.query(
             contentResolver,
-            CONTENT_URI[targetInfo],
+            contactPart.contentUri,
             projection,
-            SELECTION[targetInfo],
-            SELECTION_ARGS[targetInfo],
-            SORT_ORDER[targetInfo],
+            contactPart.selection,
+            contactPart.selectionArgs,
+            contactPart.sortOrder,
             null,
         )
         cursor?.use {
@@ -401,64 +437,6 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 result.error("", e.localizedMessage, e.toString())
             }
         }
-    }
-
-    companion object {
-        private val CONTENT_URI = mapOf(
-            ContactPart.PHONES to Phone.CONTENT_URI,
-            ContactPart.EMAILS to Email.CONTENT_URI,
-            ContactPart.STRUCTURED_NAME to ContactsContract.Data.CONTENT_URI,
-            ContactPart.ORGANIZATION to ContactsContract.Data.CONTENT_URI,
-        )
-        private val CONTACT_ID_FIELDS = mapOf(
-            ContactPart.PHONES to Phone.CONTACT_ID,
-            ContactPart.EMAILS to Email.CONTACT_ID,
-            ContactPart.STRUCTURED_NAME to StructuredName.CONTACT_ID,
-            ContactPart.ORGANIZATION to Organization.CONTACT_ID,
-        )
-        private val PROJECTION = mapOf(
-            ContactPart.PHONES to arrayOf(
-                Phone.NUMBER,
-                Phone.TYPE,
-                Phone.LABEL,
-            ),
-            ContactPart.EMAILS to arrayOf(
-                Email.ADDRESS,
-                Email.TYPE,
-                Email.LABEL,
-            ),
-            ContactPart.STRUCTURED_NAME to arrayOf(
-                StructuredName.DISPLAY_NAME,
-                StructuredName.PREFIX,
-                StructuredName.GIVEN_NAME,
-                StructuredName.MIDDLE_NAME,
-                StructuredName.FAMILY_NAME,
-                StructuredName.SUFFIX,
-            ),
-            ContactPart.ORGANIZATION to arrayOf(
-                Organization.COMPANY,
-                Organization.DEPARTMENT,
-                Organization.JOB_DESCRIPTION,
-            ),
-        )
-        private val SELECTION = mapOf(
-            ContactPart.PHONES to "${Phone.MIMETYPE} = ?",
-            ContactPart.EMAILS to "${Email.MIMETYPE} = ?",
-            ContactPart.STRUCTURED_NAME to "${StructuredName.MIMETYPE} = ?",
-            ContactPart.ORGANIZATION to "${Organization.MIMETYPE} = ?",
-        )
-        private val SELECTION_ARGS = mapOf(
-            ContactPart.PHONES to arrayOf(Phone.CONTENT_ITEM_TYPE),
-            ContactPart.EMAILS to arrayOf(Email.CONTENT_ITEM_TYPE),
-            ContactPart.STRUCTURED_NAME to arrayOf(StructuredName.CONTENT_ITEM_TYPE),
-            ContactPart.ORGANIZATION to arrayOf(Organization.CONTENT_ITEM_TYPE),
-        )
-        private val SORT_ORDER = mapOf(
-            ContactPart.PHONES to "${Phone.CONTACT_ID} ASC",
-            ContactPart.EMAILS to "${Email.CONTACT_ID} ASC",
-            ContactPart.STRUCTURED_NAME to "${StructuredName.CONTACT_ID} ASC",
-            ContactPart.ORGANIZATION to "${Organization.CONTACT_ID} ASC",
-        )
     }
 }
 
