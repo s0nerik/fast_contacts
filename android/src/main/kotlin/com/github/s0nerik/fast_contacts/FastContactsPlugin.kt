@@ -349,7 +349,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
             val company = cursor.getString(projection, Organization.COMPANY)
             val department = cursor.getString(projection, Organization.DEPARTMENT)
-            val jobDescription =cursor.getString(projection, Organization.JOB_DESCRIPTION)
+            val jobDescription = cursor.getString(projection, Organization.JOB_DESCRIPTION)
 
             if (!contacts.containsKey(contactId)) {
                 contacts[contactId] = Contact(

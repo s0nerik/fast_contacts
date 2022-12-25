@@ -41,6 +41,7 @@ class FastContacts {
 
   static Future<List<Contact>> getAllContacts({
     List<ContactField> fields = ContactField.values,
+    int batchSize = 50,
   }) async {
     if (_getAllContactsCompleter != null) {
       return _getAllContactsCompleter!.future;
@@ -48,17 +49,41 @@ class FastContacts {
 
     _getAllContactsCompleter = Completer();
     try {
-      final result = await _channel.invokeListMethod<Map>('getAllContacts', {
-        'fields': fields.map((e) => e.name).toList(),
-      });
-      final contacts = result?.map(Contact.fromMap).toList();
+      final contacts = await _loadAllContactsPages(fields, batchSize);
       _getAllContactsCompleter!.complete(contacts);
-      return contacts ?? const [];
+      return contacts;
     } catch (e) {
       _getAllContactsCompleter!.completeError(e);
       rethrow;
     } finally {
       _getAllContactsCompleter = null;
+    }
+  }
+
+  static Future<List<Contact>> _loadAllContactsPages(
+    List<ContactField> fields,
+    int batchSize,
+  ) async {
+    final contacts = <Contact>[];
+    try {
+      final contactsCount = await _channel.invokeMethod('fetchAllContacts', {
+        'fields': fields.map((e) => e.name).toList(),
+      });
+      for (int i = 0; i < contactsCount; i += batchSize) {
+        final result =
+            await _channel.invokeListMethod<Map>('getAllContactsPage', {
+          'from': i,
+          'to': (i + batchSize).clamp(0, contactsCount),
+        });
+        final contactsPage = result?.map(Contact.fromMap).toList();
+        if (contactsPage != null) {
+          contacts.addAll(contactsPage);
+        }
+        await Future.delayed(Duration(microseconds: 1));
+      }
+      return contacts;
+    } finally {
+      await _channel.invokeMethod('clearFetchedContacts');
     }
   }
 
