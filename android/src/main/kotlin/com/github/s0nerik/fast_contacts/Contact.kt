@@ -2,10 +2,10 @@ package com.github.s0nerik.fast_contacts
 
 data class Contact(
     val id: String,
-    val phones: List<ContactPhone> = emptyList(),
-    val emails: List<ContactEmail> = emptyList(),
-    val structuredName: StructuredName? = null,
-    val organization: Organization? = null,
+    var phones: List<ContactPhone> = emptyList(),
+    var emails: List<ContactEmail> = emptyList(),
+    var structuredName: StructuredName? = null,
+    var organization: Organization? = null,
 ) {
     fun asMap() = mapOf(
         "id" to id,
@@ -15,13 +15,12 @@ data class Contact(
         "organization" to organization?.asMap(),
     )
 
-    fun mergeWith(other: Contact) = Contact(
-        id = id,
-        phones = phones + other.phones,
-        emails = emails + other.emails,
-        structuredName = structuredName ?: other.structuredName,
-        organization = organization ?: other.organization,
-    )
+    fun mergeWith(other: Contact) {
+        phones = if (phones.isEmpty() && other.phones.isNotEmpty()) other.phones else phones
+        emails = if (emails.isEmpty() && other.emails.isNotEmpty()) other.emails else emails
+        structuredName = structuredName ?: other.structuredName
+        organization = organization ?: other.organization
+    }
 }
 
 data class ContactPhone(
