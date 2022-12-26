@@ -3,7 +3,6 @@ import Contacts
 @available(iOS 9.0, *)
 struct Contact {
     var id: String = ""
-    var displayName: String = ""
     var phones: [ContactPhone] = []
     var emails: [ContactEmail] = []
     var structuredName: StructuredName?
@@ -11,7 +10,6 @@ struct Contact {
 
     init(fromContact contact: CNContact) {
         id = contact.identifier
-        displayName = "\(contact.givenName) \(contact.familyName)"
         phones = contact.phoneNumbers.map { ContactPhone(fromPhoneNumber: $0) }
         emails = contact.emailAddresses.map { ContactEmail(fromEmail: $0) }
         structuredName = StructuredName(fromContact: contact)
@@ -21,7 +19,6 @@ struct Contact {
     func toMap() -> [String: Any?] {
         [
             "id": id,
-            "displayName": displayName,
             "phones": phones.map { $0.toMap() },
             "emails": emails.map { $0.toMap() },
             "structuredName": structuredName?.toMap(),
@@ -107,6 +104,7 @@ struct ContactEmail {
 }
 
 struct StructuredName {
+    var displayName: String = ""
     var namePrefix: String = ""
     var givenName: String = ""
     var middleName: String = ""
@@ -114,6 +112,7 @@ struct StructuredName {
     var nameSuffix: String = ""
 
     init(fromContact contact: CNContact) {
+        displayName = "\(contact.givenName) \(contact.familyName)"
         namePrefix = contact.namePrefix
         givenName = contact.givenName
         middleName = contact.middleName
@@ -123,6 +122,7 @@ struct StructuredName {
 
     func toMap() -> [String: Any] {
         [
+            "displayName": displayName,
             "namePrefix": namePrefix,
             "givenName": givenName,
             "middleName": middleName,

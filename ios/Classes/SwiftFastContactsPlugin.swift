@@ -9,16 +9,29 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
         let instance = SwiftFastContactsPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
     }
+    
+    private var allContacts = [Dictionary<String, Any?>]()
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
-        case "getContacts":
+        case "fetchAllContacts":
             DispatchQueue.global().async {
                 let contacts = self.getContacts()
+                self.allContacts = contacts
                 DispatchQueue.main.async {
-                    result(contacts)
+                    result(contacts.count)
                 }
             }
+        case "getAllContactsPage":
+            let args = call.arguments as! Dictionary<String, Int>
+            let from = args["from"]!
+            let to = args["to"]!
+
+            let page = Array(allContacts[from..<to])
+            result(page)
+        case "clearFetchedContacts":
+            allContacts.removeAll()
+            result(nil)
         case "getContactImage":
             let args = call.arguments as! Dictionary<String, String>
             let id = args["id"]!
@@ -41,7 +54,7 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func getContacts() -> Array<Dictionary<String, Any>> {
+    private func getContacts() -> Array<Dictionary<String, Any?>> {
         let contactStore = CNContactStore()
         let keys = [
             // Phones
@@ -62,7 +75,7 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
         let request = CNContactFetchRequest(keysToFetch: keys)
         request.sortOrder = CNContactSortOrder.givenName
 
-        var result = [Dictionary<String, Any>]()
+        var result = [Dictionary<String, Any?>]()
         try? contactStore.enumerateContacts(with: request) { (contact, cursor) in
             result.append(
                 Contact(fromContact: contact).toMap()
