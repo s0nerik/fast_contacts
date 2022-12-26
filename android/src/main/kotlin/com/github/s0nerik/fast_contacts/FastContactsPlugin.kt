@@ -18,7 +18,7 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import java.util.concurrent.*
 
-private enum class ContactField {
+enum class ContactField {
     // Name-related
     DISPLAY_NAME,
     NAME_PREFIX,
@@ -155,6 +155,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     )
 
     private var allContacts: List<Contact> = emptyList()
+    private var selectedFields: Set<ContactField> = emptySet()
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel =
@@ -171,6 +172,8 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 val fieldStrings = args["fields"] as List<String>
                 val fields = fieldStrings.map(ContactField::fromString).toSet()
                 val contactParts = ContactPart.fromFields(fields)
+
+                selectedFields = fields
 
                 val partialContacts = ConcurrentHashMap<ContactPart, Collection<Contact>>()
                 val fetchCompletionLatch = CountDownLatch(contactParts.size)
@@ -216,11 +219,12 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 val from = args["from"] as Int
                 val to = args["to"] as Int
 
-                val page = allContacts.subList(from, to).map(Contact::asMap)
+                val page = allContacts.subList(from, to).map { it.asMap(fields = selectedFields) }
                 result.success(page)
             }
             "clearFetchedContacts" -> {
                 allContacts = emptyList()
+                selectedFields = emptySet()
                 result.success(null)
             }
             "getContactImage" -> {

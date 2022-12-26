@@ -10,8 +10,12 @@ class Contact {
   factory Contact.fromMap(Map map) {
     return Contact._(
       id: map['id'] ?? '',
-      phones: (map['phones'] as List).cast<Map>().map(Phone.fromMap).toList(),
-      emails: (map['emails'] as List).cast<Map>().map(Email.fromMap).toList(),
+      phones:
+          (map['phones'] as List?)?.cast<Map>().map(Phone.fromMap).toList() ??
+              const [],
+      emails:
+          (map['emails'] as List?)?.cast<Map>().map(Email.fromMap).toList() ??
+              const [],
       structuredName: map['structuredName'] != null
           ? StructuredName.fromMap(map['structuredName']!)
           : null,
