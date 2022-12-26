@@ -38,26 +38,21 @@ class FastContacts {
   static const MethodChannel _channel =
       const MethodChannel('com.github.s0nerik.fast_contacts');
 
-  static Completer<List<Contact>>? _getAllContactsCompleter;
+  static var _getAllContactsInProgress = false;
 
   static Future<List<Contact>> getAllContacts({
     List<ContactField> fields = ContactField.values,
     int batchSize = 50,
   }) async {
-    if (_getAllContactsCompleter != null) {
-      return _getAllContactsCompleter!.future;
+    if (_getAllContactsInProgress) {
+      throw StateError('getAllContacts is already in progress.');
     }
-
-    _getAllContactsCompleter = Completer();
+    _getAllContactsInProgress = true;
     try {
       final contacts = await _loadAllContactsPages(fields, batchSize);
-      _getAllContactsCompleter!.complete(contacts);
       return contacts;
-    } catch (e) {
-      _getAllContactsCompleter!.completeError(e);
-      rethrow;
     } finally {
-      _getAllContactsCompleter = null;
+      _getAllContactsInProgress = false;
     }
   }
 
