@@ -55,10 +55,6 @@ final thumbnail = await FastContacts.getContactImage(contacts[0].id, size: Conta
 
 For a more complete usage example, see `example` project.
 
-## Limitations
-
-- No support for custom contact data projections yet (PRs are welcome!)
-
 ## Performance
 
 Loading 1000+ contacts (display name, structured name, phones, emails) at once takes ~200ms on both Android (Samsung Galaxy S8) and iOS (iPhone 8).

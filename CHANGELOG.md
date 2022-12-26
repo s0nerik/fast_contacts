@@ -1,3 +1,8 @@
+## 3.0.0
+
+- Added ability to select which fields to fetch. Fewer fields == faster
+- Decoding no longer hangs UI isolate on huge contact lists
+
 ## 2.0.0
 
 - "Add labels for Email & Phone for Android & IOS" by @PcolBP
