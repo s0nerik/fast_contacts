@@ -74,6 +74,7 @@ class FastContacts {
       final timeMillis = fetchResponse['timeMillis'];
       debugPrint('Fetched $contactsCount contacts in $timeMillis ms');
 
+      final getStart = DateTime.now().millisecondsSinceEpoch;
       for (int i = 0; i < contactsCount; i += batchSize) {
         final result =
             await _channel.invokeListMethod<Map>('getAllContactsPage', {
@@ -84,8 +85,10 @@ class FastContacts {
         if (contactsPage != null) {
           contacts.addAll(contactsPage);
         }
-        await Future.delayed(Duration(microseconds: 1));
       }
+      final getEnd = DateTime.now().millisecondsSinceEpoch;
+      debugPrint('Received all contacts in ${getEnd - getStart} ms');
+
       return contacts;
     } finally {
       await _channel.invokeMethod('clearFetchedContacts');
