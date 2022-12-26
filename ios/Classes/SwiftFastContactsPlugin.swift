@@ -36,8 +36,9 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
             let from = args["from"]!
             let to = args["to"]!
 
-            let page = Array(allContacts[from..<to])
-            result(page)
+            let pageJson = Array(allContacts[from..<to])
+            let compactedPageJson = compactJSON(pageJson)
+            result(compactedPageJson)
         case "clearFetchedContacts":
             allContacts.removeAll()
             result(nil)
@@ -109,5 +110,34 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
             return FlutterStandardTypedData.init(bytes: data)
         }
         return nil
+    }
+}
+
+// Returns compacted JSON value:
+// - removes empty arrays
+// - removes empty objects
+// - removes null values
+// - removes empty strings
+private func compactJSON(_ json: Any) -> Any {
+    switch json {
+    case let dict as [String: Any]:
+        var result = [String: Any]()
+        for (key, value) in dict {
+            let compactedValue = compactJSON(value)
+            if compactedValue is NSNull {
+                continue
+            }
+            result[key] = compactedValue
+        }
+        if (result.isEmpty) {
+            return NSNull()
+        }
+        return result
+    case let array as [Any]:
+        return [Any](array.map(compactJSON).filter { $0 is NSNull == false })
+    case let string as String:
+        return string.isEmpty ? NSNull() : string
+    default:
+        return json
     }
 }

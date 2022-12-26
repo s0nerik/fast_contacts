@@ -5,13 +5,13 @@ struct Contact {
     var id: String = ""
     var phones: [ContactPhone] = []
     var emails: [ContactEmail] = []
-    var structuredName: StructuredName?
-    var organization: Organization?
+    var structuredName: StructuredName
+    var organization: Organization
 
     init(fromContact contact: CNContact) {
         id = contact.identifier
-        phones = contact.phoneNumbers.map { ContactPhone(fromPhoneNumber: $0) }
-        emails = contact.emailAddresses.map { ContactEmail(fromEmail: $0) }
+        phones = [ContactPhone](contact.phoneNumbers.map { ContactPhone(fromPhoneNumber: $0) })
+        emails = [ContactEmail](contact.emailAddresses.map { ContactEmail(fromEmail: $0) })
         structuredName = StructuredName(fromContact: contact)
         organization = Organization(fromContact: contact)
     }
@@ -21,8 +21,8 @@ struct Contact {
             "id": id,
             "phones": phones.map { $0.toMap() },
             "emails": emails.map { $0.toMap() },
-            "structuredName": structuredName?.toMap(),
-            "organization": organization?.toMap(),
+            "structuredName": structuredName.toMap(),
+            "organization": organization.toMap(),
         ]
     }
 }
@@ -113,6 +113,9 @@ struct StructuredName {
 
     init(fromContact contact: CNContact) {
         displayName = "\(contact.givenName) \(contact.familyName)"
+        if (displayName == " ") {
+            displayName = ""
+        }
         namePrefix = contact.namePrefix
         givenName = contact.givenName
         middleName = contact.middleName
