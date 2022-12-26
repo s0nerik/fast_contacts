@@ -174,6 +174,9 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
                 val partialContacts = ConcurrentHashMap<ContactPart, Collection<Contact>>()
                 val fetchCompletionLatch = CountDownLatch(contactParts.size)
+
+                val start = System.currentTimeMillis()
+
                 contactParts.map { part ->
                     allContactsPartExecutors[part]!!.execute {
                         try {
@@ -196,8 +199,15 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                                 existing.mergeWith(part)
                             }
                         }
+
+                        val end = System.currentTimeMillis()
+                        val timeMillis = end - start
+
                         allContacts = mergedContacts.values.toList()
-                        allContacts.size
+                        mapOf(
+                            "count" to allContacts.size,
+                            "timeMillis" to timeMillis,
+                        )
                     }
                 }
             }

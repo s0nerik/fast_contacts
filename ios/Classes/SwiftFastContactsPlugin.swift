@@ -16,10 +16,19 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
         switch call.method {
         case "fetchAllContacts":
             DispatchQueue.global().async {
+                let start = DispatchTime.now()
+
                 let contacts = self.getContacts()
+
+                let end = DispatchTime.now()
+                let timeMillis = Double(end.uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+                
                 self.allContacts = contacts
                 DispatchQueue.main.async {
-                    result(contacts.count)
+                    result([
+                        "count": contacts.count,
+                        "timeMillis": timeMillis,
+                    ])
                 }
             }
         case "getAllContactsPage":

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:fast_contacts/fast_contacts.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'model/contact.dart';
@@ -66,9 +67,13 @@ class FastContacts {
   ) async {
     final contacts = <Contact>[];
     try {
-      final contactsCount = await _channel.invokeMethod('fetchAllContacts', {
+      final fetchResponse = await _channel.invokeMethod('fetchAllContacts', {
         'fields': fields.map((e) => e.name).toList(),
       });
+      final contactsCount = fetchResponse['count'];
+      final timeMillis = fetchResponse['timeMillis'];
+      debugPrint('Fetched $contactsCount contacts in $timeMillis ms');
+
       for (int i = 0; i < contactsCount; i += batchSize) {
         final result =
             await _channel.invokeListMethod<Map>('getAllContactsPage', {
