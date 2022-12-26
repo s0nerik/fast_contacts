@@ -77,7 +77,7 @@ class _MyAppState extends State<MyApp> {
                 ],
               ),
             ),
-            Text(_text ?? '', textAlign: TextAlign.center),
+            Text(_text ?? 'Tap to load contacts', textAlign: TextAlign.center),
             Expanded(
               child: Scrollbar(
                 controller: _ctrl,

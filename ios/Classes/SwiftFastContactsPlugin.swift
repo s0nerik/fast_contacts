@@ -2,6 +2,93 @@ import Flutter
 import UIKit
 import Contacts
 
+enum ContactField {
+  // Name-related
+  case displayName
+  case namePrefix
+  case givenName
+  case middleName
+  case familyName
+  case nameSuffix
+
+  // Organization-related
+  case company
+  case department
+  case jobDescription
+
+  // Phone-related
+  case phoneNumbers
+  case phoneLabels
+
+  // Email-related
+  case emailAddresses
+  case emailLabels
+}
+
+private func parseContactField(field: String) throws -> ContactField {
+  switch field {
+  case "displayName":
+    return .displayName
+  case "namePrefix":
+    return .namePrefix
+  case "givenName":
+    return .givenName
+  case "middleName":
+    return .middleName
+  case "familyName":
+    return .familyName
+  case "nameSuffix":
+    return .nameSuffix
+  case "company":
+    return .company
+  case "department":
+    return .department
+  case "jobDescription":
+    return .jobDescription
+  case "phoneNumbers":
+    return .phoneNumbers
+  case "phoneLabels":
+    return .phoneLabels
+  case "emailAddresses":
+    return .emailAddresses
+  case "emailLabels":
+    return .emailLabels
+  default:
+    throw NSError(domain: "Invalid field", code: 0, userInfo: nil)
+  }
+}
+
+private func getContactFieldKeyDescriptors(field: ContactField) -> [CNKeyDescriptor] {
+    switch (field) {
+    case .displayName:
+        return [CNContactGivenNameKey, CNContactFamilyNameKey] as [CNKeyDescriptor]
+    case .namePrefix:
+        return [CNContactNamePrefixKey] as [CNKeyDescriptor]
+    case .givenName:
+        return [CNContactGivenNameKey] as [CNKeyDescriptor]
+    case .middleName:
+        return [CNContactMiddleNameKey] as [CNKeyDescriptor]
+    case .familyName:
+        return [CNContactFamilyNameKey] as [CNKeyDescriptor]
+    case .nameSuffix:
+        return [CNContactNameSuffixKey] as [CNKeyDescriptor]
+    case .company:
+        return [CNContactOrganizationNameKey] as [CNKeyDescriptor]
+    case .department:
+        return [CNContactDepartmentNameKey] as [CNKeyDescriptor]
+    case .jobDescription:
+        return [CNContactJobTitleKey] as [CNKeyDescriptor]
+    case .phoneNumbers:
+        return [CNContactPhoneNumbersKey] as [CNKeyDescriptor]
+    case .phoneLabels:
+        return [CNContactPhoneNumbersKey] as [CNKeyDescriptor]
+    case .emailAddresses:
+        return [CNContactEmailAddressesKey] as [CNKeyDescriptor]
+    case .emailLabels:
+        return [CNContactEmailAddressesKey] as [CNKeyDescriptor]
+    }
+}
+
 @available(iOS 9.0, *)
 public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -15,10 +102,13 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "fetchAllContacts":
+            let args = call.arguments as! Dictionary<String, Any>
+            let fields = Set((args["fields"] as! [String]).map { try! parseContactField(field: $0) })
+
             DispatchQueue.global().async {
                 let start = DispatchTime.now()
 
-                let contacts = self.getContacts()
+                let contacts = self.getContacts(fields: fields)
 
                 let end = DispatchTime.now()
                 let timeMillis = Double(end.uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
@@ -64,31 +154,16 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func getContacts() -> Array<Dictionary<String, Any?>> {
+    private func getContacts(fields: Set<ContactField>) -> Array<Dictionary<String, Any?>> {
         let contactStore = CNContactStore()
-        let keys = [
-            // Phones
-            CNContactPhoneNumbersKey,
-            // Emails
-            CNContactEmailAddressesKey,
-            // Structured name
-            CNContactNamePrefixKey,
-            CNContactGivenNameKey,
-            CNContactMiddleNameKey,
-            CNContactFamilyNameKey,
-            CNContactNameSuffixKey,
-            // Work information
-            CNContactOrganizationNameKey,
-            CNContactDepartmentNameKey,
-            CNContactJobTitleKey,
-        ] as [CNKeyDescriptor]
+        let keys = fields.map(getContactFieldKeyDescriptors).flatMap { $0 }
         let request = CNContactFetchRequest(keysToFetch: keys)
-        request.sortOrder = CNContactSortOrder.givenName
+        request.sortOrder = CNContactSortOrder.none
 
         var result = [Dictionary<String, Any?>]()
         try? contactStore.enumerateContacts(with: request) { (contact, cursor) in
             result.append(
-                Contact(fromContact: contact).toMap()
+                Contact(fromContact: contact, fields: fields).toMap()
             )
         }
         return result
