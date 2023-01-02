@@ -44,7 +44,7 @@ Set the `NSContactsUsageDescription` in your `Info.plist` file
 import 'package:fast_contacts/fast_contacts.dart';  
 
 // Get all contacts
-final contacts = await FastContacts.allContacts;
+final contacts = await FastContacts.getAllContacts();
 
 // Get first contact's image (thumbnail)
 final thumbnail = await FastContacts.getContactImage(contacts[0].id);
