@@ -41,6 +41,14 @@ class FastContacts {
 
   static var _getAllContactsInProgress = false;
 
+  /// Returns all contacts.
+  ///
+  /// [fields] is a list of fields to fetch. Less fields means faster loading.
+  /// By default, all fields are fetched.
+  ///
+  /// [batchSize] specifies how many contacts are loaded in a single batch under
+  /// the hood. Higher values mean faster loading but increase the chances
+  /// of UI freezes.
   static Future<List<Contact>> getAllContacts({
     List<ContactField> fields = ContactField.values,
     int batchSize = 50,
@@ -91,6 +99,9 @@ class FastContacts {
     }
   }
 
+  /// Returns an image of the contact with the given [contactId].
+  ///
+  /// [size] specifies the size of the image. By default, a thumbnail is returned.
   static Future<td.Uint8List?> getContactImage(
     String contactId, {
     ContactImageSize size = ContactImageSize.thumbnail,
