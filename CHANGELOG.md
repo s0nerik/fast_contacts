@@ -1,3 +1,7 @@
+## 3.0.1
+
+- "fix non_type_as_type_argument for Uint8List" by @dadagov125
+
 ## 3.0.0
 
 - Added ability to select which fields to fetch. Fewer fields == faster
