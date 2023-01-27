@@ -1,5 +1,6 @@
 name: fast_contacts
-description: A faster way of accessing device's contacts list
+description: >
+  A faster way of accessing the device's contacts list. Allows fetching the whole contacts list in a sane amount of time.
 version: 3.0.2
 homepage: https://pub.dev/packages/fast_contacts
 repository: https://github.com/s0nerik/fast_contacts
