@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:typed_data' as td;
 
 import 'package:fast_contacts/fast_contacts.dart';
 import 'package:flutter/material.dart';
@@ -190,7 +190,7 @@ class _ContactImage extends StatefulWidget {
 }
 
 class __ContactImageState extends State<_ContactImage> {
-  late Future<Uint8List?> _imageFuture;
+  late Future<td.Uint8List?> _imageFuture;
 
   @override
   void initState() {
@@ -200,7 +200,7 @@ class __ContactImageState extends State<_ContactImage> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Uint8List?>(
+    return FutureBuilder<td.Uint8List?>(
       future: _imageFuture,
       builder: (context, snapshot) => Container(
         width: 56,
