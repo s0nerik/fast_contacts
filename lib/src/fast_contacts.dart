@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:typed_data' as td;
 
 import 'package:fast_contacts/fast_contacts.dart';
 import 'package:flutter/foundation.dart';
@@ -91,7 +91,7 @@ class FastContacts {
     }
   }
 
-  static Future<Uint8List?> getContactImage(
+  static Future<td.Uint8List?> getContactImage(
     String contactId, {
     ContactImageSize size = ContactImageSize.thumbnail,
   }) =>
