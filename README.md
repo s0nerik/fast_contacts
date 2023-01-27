@@ -1,5 +1,7 @@
 # fast_contacts
 
+ [![pub package](https://img.shields.io/pub/v/fast_contacts.svg)](https://pub.dev/packages/fast_contacts)
+
 A **much** faster alternative to [contacts_service](https://pub.dev/packages/contacts_service) and [flutter_contact](https://pub.dev/packages/flutter_contact) for reading the device's contact book.
 
 This plugin was tuned to achieve optimal performance for fetching the whole list of contacts.
