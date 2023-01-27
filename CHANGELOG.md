@@ -1,3 +1,7 @@
+## 3.0.2
+
+- Fixed `dart:typed_data` import issue for old Flutter versions
+
 ## 3.0.1
 
 - "fix non_type_as_type_argument for Uint8List" by @dadagov125
