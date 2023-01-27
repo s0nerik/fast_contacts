@@ -1,3 +1,7 @@
+## 3.0.3
+
+- Added some documentation
+
 ## 3.0.2
 
 - Fixed `dart:typed_data` import issue for old Flutter versions
