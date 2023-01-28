@@ -1,6 +1,9 @@
 # fast_contacts
 
- [![pub package](https://img.shields.io/pub/v/fast_contacts.svg)](https://pub.dev/packages/fast_contacts)
+[![fast_contacts](https://img.shields.io/pub/v/fast_contacts)](https://pub.dev/packages/fast_contacts)
+[![fast_contacts](https://img.shields.io/pub/likes/fast_contacts)](https://pub.dev/packages/fast_contacts)
+[![fast_contacts](https://img.shields.io/pub/points/fast_contacts)](https://pub.dev/packages/fast_contacts)
+[![fast_contacts](https://img.shields.io/pub/popularity/fast_contacts)](https://pub.dev/packages/fast_contacts)
 
 A **much** faster alternative to [contacts_service](https://pub.dev/packages/contacts_service) and [flutter_contact](https://pub.dev/packages/flutter_contact) for reading the device's contact book.
 
