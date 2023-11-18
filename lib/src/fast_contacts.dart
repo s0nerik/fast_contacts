@@ -110,4 +110,20 @@ class FastContacts {
         'id': contactId,
         'size': size == ContactImageSize.thumbnail ? 'thumbnail' : 'fullSize',
       });
+
+  /// Returns data of a contact with the given [contactId].
+  ///
+  /// [fields] is a list of fields to fetch. Less fields means faster loading.
+  /// By default, all fields are fetched.
+  static Future<Contact?> getContact(
+    String contactId, {
+    List<ContactField> fields = ContactField.values,
+  }) async {
+    final result = await _channel.invokeMethod('getContact', {
+      'id': contactId,
+      'fields': fields.map((e) => e.name).toList(),
+    });
+    if (result == null) return null;
+    return Contact.fromMap(result);
+  }
 }
