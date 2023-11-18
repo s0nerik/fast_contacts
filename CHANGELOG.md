@@ -1,3 +1,7 @@
+## 3.0.4
+
+- AGP 8.0 support
+
 ## 3.0.3
 
 - Added some documentation
