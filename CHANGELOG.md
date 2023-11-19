@@ -1,3 +1,7 @@
+## 3.1.2
+
+- Updated README
+
 ## 3.1.1
 
 - Made `Contact` constructor public
