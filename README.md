@@ -51,11 +51,14 @@ import 'package:fast_contacts/fast_contacts.dart';
 // Get all contacts
 final contacts = await FastContacts.getAllContacts();
 
-// Get first contact's image (thumbnail)
-final thumbnail = await FastContacts.getContactImage(contacts[0].id);
+// Get single contact by ID
+final contact = await FastContacts.getContact(contactId);
 
-// Get first contact's image (full size)
-final thumbnail = await FastContacts.getContactImage(contacts[0].id, size: ContactImageSize.fullSize);
+// Get contact's image (thumbnail)
+final thumbnail = await FastContacts.getContactImage(contact.id);
+
+// Get contact's image (full size)
+final thumbnail = await FastContacts.getContactImage(contact.id, size: ContactImageSize.fullSize);
 ```
 
 For a more complete usage example, see `example` project.
