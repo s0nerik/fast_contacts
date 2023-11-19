@@ -1,3 +1,7 @@
+## 3.1.1
+
+- Made `Contact` constructor public
+
 ## 3.1.0
 
 - Added `getContact()` method to fetch a single contact by ID
