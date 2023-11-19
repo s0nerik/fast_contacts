@@ -1,5 +1,5 @@
 class Contact {
-  Contact._({
+  Contact({
     required this.id,
     required this.phones,
     required this.emails,
@@ -50,7 +50,7 @@ class Contact {
   }
 
   factory Contact.fromMap(Map map) {
-    return Contact._(
+    return Contact(
       id: map['id'] ?? '',
       phones:
           (map['phones'] as List?)?.cast<Map>().map(Phone.fromMap).toList() ??
@@ -69,7 +69,7 @@ class Contact {
 }
 
 class Phone {
-  Phone._({
+  Phone({
     required this.number,
     required this.label,
   });
@@ -101,7 +101,7 @@ class Phone {
   }
 
   factory Phone.fromMap(Map map) {
-    return Phone._(
+    return Phone(
       number: map['number'] ?? '',
       label: map['label'] ?? '',
     );
@@ -109,7 +109,7 @@ class Phone {
 }
 
 class Email {
-  Email._({
+  Email({
     required this.address,
     required this.label,
   });
@@ -141,7 +141,7 @@ class Email {
   }
 
   factory Email.fromMap(Map map) {
-    return Email._(
+    return Email(
       address: map['address'] ?? '',
       label: map['label'] ?? '',
     );
@@ -149,7 +149,7 @@ class Email {
 }
 
 class StructuredName {
-  StructuredName._({
+  StructuredName({
     required this.displayName,
     required this.namePrefix,
     required this.givenName,
@@ -203,7 +203,7 @@ class StructuredName {
   }
 
   factory StructuredName.fromMap(Map map) {
-    return StructuredName._(
+    return StructuredName(
       displayName: map['displayName'] ?? '',
       namePrefix: map['namePrefix'] ?? '',
       givenName: map['givenName'] ?? '',
@@ -215,7 +215,7 @@ class StructuredName {
 }
 
 class Organization {
-  Organization._({
+  Organization({
     required this.company,
     required this.department,
     required this.jobDescription,
@@ -252,7 +252,7 @@ class Organization {
   }
 
   factory Organization.fromMap(Map map) {
-    return Organization._(
+    return Organization(
       company: map['company'] ?? '',
       department: map['department'] ?? '',
       jobDescription: map['jobDescription'] ?? '',
