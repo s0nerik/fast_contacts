@@ -149,16 +149,35 @@ public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
                     }
                 }
             }
+        case "getContact":
+            let args = call.arguments as! Dictionary<String, Any>
+            let id = args["id"]! as! String
+            let fields = Set((args["fields"] as! [String]).map { try! parseContactField(field: $0) })
+            
+            DispatchQueue.global().async {
+                let contacts = self.getContacts(fields: fields, contactId: id)
+                DispatchQueue.main.async {
+                    if (contacts.count > 0) {
+                        result(contacts[0])
+                    } else {
+                        result(nil)
+                    }
+                }
+            }
         default:
             result(FlutterMethodNotImplemented)
         }
     }
 
-    private func getContacts(fields: Set<ContactField>) -> Array<Dictionary<String, Any?>> {
+    private func getContacts(fields: Set<ContactField>, contactId: String? = nil) -> Array<Dictionary<String, Any?>> {
         let contactStore = CNContactStore()
         let keys = fields.map(getContactFieldKeyDescriptors).flatMap { $0 }
         let request = CNContactFetchRequest(keysToFetch: keys)
         request.sortOrder = CNContactSortOrder.none
+        
+        if let contactId = contactId {
+            request.predicate = CNContact.predicateForContacts(withIdentifiers: [contactId])
+        }
 
         var result = [Dictionary<String, Any?>]()
         try? contactStore.enumerateContacts(with: request) { (contact, cursor) in
