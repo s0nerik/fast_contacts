@@ -148,6 +148,10 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     private val allContactsPartExecutors =
         ContactPart.values().associateWith { Executors.newSingleThreadExecutor() }
 
+    private val singleContactExecutor = Executors.newSingleThreadExecutor()
+    private val singleContactPartExecutors =
+        ContactPart.values().associateWith { Executors.newSingleThreadExecutor() }
+
     private val imageExecutor = ThreadPoolExecutor(
         4, Integer.MAX_VALUE,
         20L, TimeUnit.SECONDS,
@@ -240,6 +244,43 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                     }
                 }
             }
+            "getContact" -> {
+                val args = call.arguments as Map<String, Any>
+                val id = args["id"] as String
+                val fieldStrings = args["fields"] as List<String>
+                val fields = fieldStrings.map(ContactField::fromString).toSet()
+                val contactParts = ContactPart.fromFields(fields)
+
+                val partialContacts = ConcurrentHashMap<ContactPart, Collection<Contact>>()
+                val fetchCompletionLatch = CountDownLatch(contactParts.size)
+
+                contactParts.map { part ->
+                    singleContactPartExecutors[part]!!.execute {
+                        try {
+                            val contacts = fetchPartialContacts(part, fields, id)
+                            partialContacts[part] = contacts
+                        } finally {
+                            fetchCompletionLatch.countDown()
+                        }
+                    }
+                }
+                singleContactExecutor.execute {
+                    fetchCompletionLatch.await()
+                    withResultDispatcher(result) {
+                        val mergedContacts = mutableMapOf<String, Contact>()
+                        for (part in partialContacts.values.flatten()) {
+                            val existing = mergedContacts[part.id]
+                            if (existing == null) {
+                                mergedContacts[part.id] = part
+                            } else {
+                                existing.mergeWith(part)
+                            }
+                        }
+
+                        mergedContacts[id]!!.asMap(fields = fields)
+                    }
+                }
+            }
             else -> result.notImplemented()
         }
     }
@@ -260,22 +301,26 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
 
     private fun fetchPartialContacts(
         part: ContactPart,
-        fields: Set<ContactField>
+        fields: Set<ContactField>,
+        contactId: String? = null,
     ): Collection<Contact> {
         return when (part) {
-            ContactPart.PHONES -> readPhonesInfo(fields)
-            ContactPart.EMAILS -> readEmailsInfo(fields)
-            ContactPart.STRUCTURED_NAME -> readStructuredNameInfo(fields)
-            ContactPart.ORGANIZATION -> readOrganizationInfo(fields)
+            ContactPart.PHONES -> readPhonesInfo(fields, contactId)
+            ContactPart.EMAILS -> readEmailsInfo(fields, contactId)
+            ContactPart.STRUCTURED_NAME -> readStructuredNameInfo(fields, contactId)
+            ContactPart.ORGANIZATION -> readOrganizationInfo(fields, contactId)
         }.values
     }
 
-    private fun readStructuredNameInfo(fields: Set<ContactField>): Map<Long, Contact> {
+    private fun readStructuredNameInfo(
+        fields: Set<ContactField>,
+        contactId: String? = null,
+    ): Map<Long, Contact> {
         val contacts = mutableMapOf<Long, Contact>()
-        readTargetInfo(ContactPart.STRUCTURED_NAME, fields) { cursor ->
-            val contactId = cursor.getLong(StructuredName.CONTACT_ID)!!
-            contacts[contactId] = Contact(
-                id = contactId.toString(),
+        readTargetInfo(ContactPart.STRUCTURED_NAME, fields, contactId) { cursor ->
+            val id = cursor.getLong(StructuredName.CONTACT_ID)!!
+            contacts[id] = Contact(
+                id = id.toString(),
                 structuredName = StructuredName(
                     displayName = cursor.getString(StructuredName.DISPLAY_NAME) ?: "",
                     namePrefix = cursor.getString(StructuredName.PREFIX) ?: "",
@@ -289,10 +334,13 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         return contacts
     }
 
-    private fun readPhonesInfo(fields: Set<ContactField>): Map<Long, Contact> {
+    private fun readPhonesInfo(
+        fields: Set<ContactField>,
+        contactId: String? = null,
+    ): Map<Long, Contact> {
         val contacts = mutableMapOf<Long, Contact>()
-        readTargetInfo(ContactPart.PHONES, fields) { cursor ->
-            val contactId = cursor.getLong(Phone.CONTACT_ID)!!
+        readTargetInfo(ContactPart.PHONES, fields, contactId) { cursor ->
+            val id = cursor.getLong(Phone.CONTACT_ID)!!
             val contactPhone = ContactPhone(
                 number = cursor.getString(Phone.NUMBER) ?: "",
                 label = cursor.getString(Phone.LABEL)
@@ -300,11 +348,11 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                     ?: "",
             )
 
-            if (contacts.containsKey(contactId)) {
-                (contacts[contactId]!!.phones as MutableList<ContactPhone>).add(contactPhone)
+            if (contacts.containsKey(id)) {
+                (contacts[id]!!.phones as MutableList<ContactPhone>).add(contactPhone)
             } else {
-                contacts[contactId] = Contact(
-                    id = contactId.toString(),
+                contacts[id] = Contact(
+                    id = id.toString(),
                     phones = mutableListOf(contactPhone),
                 )
             }
@@ -339,10 +387,13 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         }
     }
 
-    private fun readEmailsInfo(fields: Set<ContactField>): Map<Long, Contact> {
+    private fun readEmailsInfo(
+        fields: Set<ContactField>,
+        contactId: String? = null,
+    ): Map<Long, Contact> {
         val contacts = mutableMapOf<Long, Contact>()
-        readTargetInfo(ContactPart.EMAILS, fields) { cursor ->
-            val contactId = cursor.getLong(Email.CONTACT_ID)!!
+        readTargetInfo(ContactPart.EMAILS, fields, contactId) { cursor ->
+            val id = cursor.getLong(Email.CONTACT_ID)!!
             val contactEmail = ContactEmail(
                 address = cursor.getString(Email.ADDRESS) ?: "",
                 label = cursor.getString(Email.LABEL)
@@ -350,11 +401,11 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                     ?: "",
             )
 
-            if (contacts.containsKey(contactId)) {
-                (contacts[contactId]!!.emails as MutableList<ContactEmail>).add(contactEmail)
+            if (contacts.containsKey(id)) {
+                (contacts[id]!!.emails as MutableList<ContactEmail>).add(contactEmail)
             } else {
-                contacts[contactId] = Contact(
-                    id = contactId.toString(),
+                contacts[id] = Contact(
+                    id = id.toString(),
                     emails = mutableListOf(contactEmail),
                 )
             }
@@ -372,12 +423,15 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         }
     }
 
-    private fun readOrganizationInfo(fields: Set<ContactField>): Map<Long, Contact> {
+    private fun readOrganizationInfo(
+        fields: Set<ContactField>,
+        contactId: String? = null,
+    ): Map<Long, Contact> {
         val contacts = mutableMapOf<Long, Contact>()
-        readTargetInfo(ContactPart.ORGANIZATION, fields) { cursor ->
-            val contactId = cursor.getLong(Organization.CONTACT_ID)!!
-            contacts[contactId] = Contact(
-                id = contactId.toString(),
+        readTargetInfo(ContactPart.ORGANIZATION, fields, contactId) { cursor ->
+            val id = cursor.getLong(Organization.CONTACT_ID)!!
+            contacts[id] = Contact(
+                id = id.toString(),
                 organization = Organization(
                     company = cursor.getString(Organization.COMPANY) ?: "",
                     department = cursor.getString(Organization.DEPARTMENT) ?: "",
@@ -391,7 +445,8 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
     private fun readTargetInfo(
         contactPart: ContactPart,
         fields: Set<ContactField>,
-        onData: (cursor: Cursor) -> Unit
+        contactId: String? = null,
+        onData: (cursor: Cursor) -> Unit,
     ) {
         val fieldNames = fields.map { it.toProjectionStrings() }.flatten().toMutableList()
         fieldNames.add(0, contactPart.contactIdColumn)
@@ -401,8 +456,10 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             contentResolver,
             contactPart.contentUri,
             projection,
-            contactPart.selection,
-            contactPart.selectionArgs,
+            contactId?.let {
+                "${contactPart.contactIdColumn} = ? AND ${contactPart.selection}"
+            } ?: contactPart.selection,
+            contactId?.let { arrayOf(it) + contactPart.selectionArgs } ?: contactPart.selectionArgs,
             contactPart.sortOrder,
             null,
         )
