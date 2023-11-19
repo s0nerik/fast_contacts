@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data' as td;
 
 import 'package:fast_contacts/fast_contacts.dart';
@@ -137,6 +138,13 @@ class _ContactItem extends StatelessWidget {
     return SizedBox(
       height: height,
       child: ListTile(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => _ContactDetailsPage(
+              contactId: contact.id,
+            ),
+          ),
+        ),
         leading: _ContactImage(contact: contact),
         title: Text(
           contact.displayName,
@@ -208,6 +216,81 @@ class __ContactImageState extends State<_ContactImage> {
         child: snapshot.hasData
             ? Image.memory(snapshot.data!, gaplessPlayback: true)
             : Icon(Icons.account_box_rounded),
+      ),
+    );
+  }
+}
+
+class _ContactDetailsPage extends StatefulWidget {
+  const _ContactDetailsPage({
+    Key? key,
+    required this.contactId,
+  }) : super(key: key);
+
+  final String contactId;
+
+  @override
+  State<_ContactDetailsPage> createState() => _ContactDetailsPageState();
+}
+
+class _ContactDetailsPageState extends State<_ContactDetailsPage> {
+  late Future<Contact?> _contactFuture;
+
+  Duration? _timeTaken;
+
+  @override
+  void initState() {
+    super.initState();
+    final sw = Stopwatch()..start();
+    _contactFuture = FastContacts.getContact(widget.contactId).then((value) {
+      _timeTaken = (sw..stop()).elapsed;
+      return value;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Contact details: ${widget.contactId}'),
+      ),
+      body: FutureBuilder<Contact?>(
+        future: _contactFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final error = snapshot.error;
+          if (error != null) {
+            return Center(child: Text('Error: $error'));
+          }
+
+          final contact = snapshot.data;
+          if (contact == null) {
+            return const Center(child: Text('Contact not found'));
+          }
+
+          final contactJson =
+              JsonEncoder.withIndent('  ').convert(contact.toMap());
+
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ContactImage(contact: contact),
+                  const SizedBox(height: 16),
+                  if (_timeTaken != null)
+                    Text('Took: ${_timeTaken!.inMilliseconds}ms'),
+                  const SizedBox(height: 16),
+                  Text(contactJson),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
