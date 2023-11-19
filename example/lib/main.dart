@@ -22,6 +22,8 @@ class _MyAppState extends State<MyApp> {
 
   bool _isLoading = false;
 
+  List<ContactField> _fields = ContactField.values.toList();
+
   final _ctrl = ScrollController();
 
   Future<void> loadContacts() async {
@@ -30,7 +32,7 @@ class _MyAppState extends State<MyApp> {
       _isLoading = true;
       if (mounted) setState(() {});
       final sw = Stopwatch()..start();
-      _contacts = await FastContacts.getAllContacts();
+      _contacts = await FastContacts.getAllContacts(fields: _fields);
       sw.stop();
       _text =
           'Contacts: ${_contacts.length}\nTook: ${sw.elapsedMilliseconds}ms';
@@ -79,7 +81,66 @@ class _MyAppState extends State<MyApp> {
                 ],
               ),
             ),
+            ExpansionTile(
+              title: Row(
+                children: [
+                  Text('Fields:'),
+                  const SizedBox(width: 8),
+                  const Spacer(),
+                  TextButton(
+                    child: Row(
+                      children: [
+                        if (_fields.length == ContactField.values.length) ...[
+                          Icon(Icons.check),
+                          const SizedBox(width: 8),
+                        ],
+                        Text('All'),
+                      ],
+                    ),
+                    onPressed: () => setState(() {
+                      _fields = ContactField.values.toList();
+                    }),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    child: Row(
+                      children: [
+                        if (_fields.length == 0) ...[
+                          Icon(Icons.check),
+                          const SizedBox(width: 8),
+                        ],
+                        Text('None'),
+                      ],
+                    ),
+                    onPressed: () => setState(() {
+                      _fields.clear();
+                    }),
+                  ),
+                ],
+              ),
+              children: [
+                Wrap(
+                  spacing: 4,
+                  children: [
+                    for (final field in ContactField.values)
+                      ChoiceChip(
+                        label: Text(field.name),
+                        selected: _fields.contains(field),
+                        onSelected: (selected) => setState(() {
+                          if (selected) {
+                            _fields.add(field);
+                          } else {
+                            _fields.remove(field);
+                          }
+                        }),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Text(_text ?? 'Tap to load contacts', textAlign: TextAlign.center),
+            const SizedBox(height: 8),
             Expanded(
               child: Scrollbar(
                 controller: _ctrl,
