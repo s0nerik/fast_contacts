@@ -1,3 +1,8 @@
+## 3.1.0
+
+- Added `getContact()` method to fetch a single contact by ID
+- Implemented `hashCode`, `==`, `toString()`, `toMap()`, `fromMap()` for `Contact` and its parts
+
 ## 3.0.4
 
 - AGP 8.0 support
