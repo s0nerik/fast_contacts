@@ -277,7 +277,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                             }
                         }
 
-                        mergedContacts[id]!!.asMap(fields = fields)
+                        mergedContacts[id]?.asMap(fields = fields)
                     }
                 }
             }
