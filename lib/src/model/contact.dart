@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
+
+@immutable
 class Contact {
-  Contact({
+  const Contact({
     required this.id,
     required this.phones,
     required this.emails,
@@ -68,8 +71,9 @@ class Contact {
   }
 }
 
+@immutable
 class Phone {
-  Phone({
+  const Phone({
     required this.number,
     required this.label,
   });
@@ -108,8 +112,9 @@ class Phone {
   }
 }
 
+@immutable
 class Email {
-  Email({
+  const Email({
     required this.address,
     required this.label,
   });
@@ -148,8 +153,9 @@ class Email {
   }
 }
 
+@immutable
 class StructuredName {
-  StructuredName({
+  const StructuredName({
     required this.displayName,
     required this.namePrefix,
     required this.givenName,
@@ -214,8 +220,9 @@ class StructuredName {
   }
 }
 
+@immutable
 class Organization {
-  Organization({
+  const Organization({
     required this.company,
     required this.department,
     required this.jobDescription,
