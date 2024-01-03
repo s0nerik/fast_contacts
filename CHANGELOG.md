@@ -1,3 +1,7 @@
+## 3.1.3
+
+- Newer Kotlin plugin support
+
 ## 3.1.2
 
 - Updated README
