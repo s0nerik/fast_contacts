@@ -16,6 +16,8 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
+import java.io.FileNotFoundException
+import java.io.IOException
 import java.util.concurrent.*
 
 enum class ContactField {
@@ -81,34 +83,34 @@ private enum class ContactPart {
 
     val contentUri: Uri
         get() = when (this) {
-                PHONES -> Phone.CONTENT_URI
-                EMAILS -> Email.CONTENT_URI
-                STRUCTURED_NAME -> ContactsContract.Data.CONTENT_URI
-                ORGANIZATION -> ContactsContract.Data.CONTENT_URI
-            }
+            PHONES -> Phone.CONTENT_URI
+            EMAILS -> Email.CONTENT_URI
+            STRUCTURED_NAME -> ContactsContract.Data.CONTENT_URI
+            ORGANIZATION -> ContactsContract.Data.CONTENT_URI
+        }
     val contactIdColumn: String
-        get() = when(this) {
+        get() = when (this) {
             PHONES -> Phone.CONTACT_ID
             EMAILS -> Email.CONTACT_ID
             STRUCTURED_NAME -> StructuredName.CONTACT_ID
             ORGANIZATION -> Organization.CONTACT_ID
         }
     val selection: String
-        get() = when(this) {
+        get() = when (this) {
             PHONES -> "${Phone.MIMETYPE} = ?"
             EMAILS -> "${Email.MIMETYPE} = ?"
             STRUCTURED_NAME -> "${StructuredName.MIMETYPE} = ?"
             ORGANIZATION -> "${Organization.MIMETYPE} = ?"
         }
     val selectionArgs: Array<String>
-        get() = when(this) {
+        get() = when (this) {
             PHONES -> arrayOf(Phone.CONTENT_ITEM_TYPE)
             EMAILS -> arrayOf(Email.CONTENT_ITEM_TYPE)
             STRUCTURED_NAME -> arrayOf(StructuredName.CONTENT_ITEM_TYPE)
             ORGANIZATION -> arrayOf(Organization.CONTENT_ITEM_TYPE)
         }
     val sortOrder: String
-        get() = when(this) {
+        get() = when (this) {
             PHONES -> "${Phone.CONTACT_ID} ASC"
             EMAILS -> "${Email.CONTACT_ID} ASC"
             STRUCTURED_NAME -> "${StructuredName.CONTACT_ID} ASC"
@@ -125,11 +127,14 @@ private enum class ContactPart {
                     ContactField.MIDDLE_NAME,
                     ContactField.FAMILY_NAME,
                     ContactField.NAME_SUFFIX -> STRUCTURED_NAME
+
                     ContactField.COMPANY,
                     ContactField.DEPARTMENT,
                     ContactField.JOB_DESCRIPTION -> ORGANIZATION
+
                     ContactField.PHONE_NUMBERS,
                     ContactField.PHONE_LABELS -> PHONES
+
                     ContactField.EMAIL_ADDRESSES,
                     ContactField.EMAIL_LABELS -> EMAILS
                 }
@@ -218,6 +223,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                     }
                 }
             }
+
             "getAllContactsPage" -> {
                 val args = call.arguments as Map<String, Any>
                 val from = args["from"] as Int
@@ -226,11 +232,13 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                 val page = allContacts.subList(from, to).map { it.asMap(fields = selectedFields) }
                 result.success(page)
             }
+
             "clearFetchedContacts" -> {
                 allContacts = emptyList()
                 selectedFields = emptySet()
                 result.success(null)
             }
+
             "getContactImage" -> {
                 val args = call.arguments as Map<String, String>
                 val contactId = args.getValue("id").toLong()
@@ -244,6 +252,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                     }
                 }
             }
+
             "getContact" -> {
                 val args = call.arguments as Map<String, Any>
                 val id = args["id"] as String
@@ -281,6 +290,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
                     }
                 }
             }
+
             else -> result.notImplemented()
         }
     }
@@ -481,6 +491,9 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             null,
         )?.use { cursor ->
             if (cursor.moveToNext()) cursor.getBlob(0) else null
+        } ?: run {
+            // "Failed to query contact photo for contact ID
+            null
         }
     }
 
@@ -490,11 +503,23 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         val displayPhotoUri =
             Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.DISPLAY_PHOTO)
 
-        return contentResolver.openAssetFileDescriptor(displayPhotoUri, "r")?.use { fd ->
-            fd.createInputStream().use {
-                it.readBytes()
+        return try {
+            contentResolver.openAssetFileDescriptor(displayPhotoUri, "r")?.use { fd ->
+                fd.createInputStream().use {
+                    it.readBytes()
+                }
+            } ?: run {
+                // "No asset file descriptor found for contact ID
+                null
             }
+        } catch (e: FileNotFoundException) {
+          //"File not found for contact ID
+            null
+        } catch (e: IOException) {
+            //"I/O error for contact ID: $contactId"
+            null
         }
+
     }
 
     private fun <T> withResultDispatcher(result: MethodChannel.Result, action: () -> T) {
