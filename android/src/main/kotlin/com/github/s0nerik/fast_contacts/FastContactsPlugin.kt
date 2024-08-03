@@ -490,10 +490,14 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         val displayPhotoUri =
             Uri.withAppendedPath(contactUri, ContactsContract.Contacts.Photo.DISPLAY_PHOTO)
 
-        return contentResolver.openAssetFileDescriptor(displayPhotoUri, "r")?.use { fd ->
-            fd.createInputStream().use {
-                it.readBytes()
+        return try {
+            contentResolver.openAssetFileDescriptor(displayPhotoUri, "r")?.use { fd ->
+                fd.createInputStream().use {
+                    it.readBytes()
+                }
             }
+        } catch (e: Exception) {
+            null
         }
     }
 
