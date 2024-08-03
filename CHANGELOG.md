@@ -1,3 +1,7 @@
+## 3.1.4
+
+- Android: return `null` instead of an error upon failed attempt to read a contact image file
+
 ## 3.1.3
 
 - Newer Kotlin plugin support
