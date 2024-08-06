@@ -289,15 +289,15 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         channel.setMethodCallHandler(null)
     }
 
-    override fun getLifecycle(): Lifecycle {
-        val registry = LifecycleRegistry(this)
-        registry.currentState = Lifecycle.State.RESUMED
-        return registry
-    }
+    override val lifecycle: Lifecycle
+        get() {
+            val registry = LifecycleRegistry(this)
+            registry.currentState = Lifecycle.State.RESUMED
+            return registry
+        }
 
-    override fun getViewModelStore(): ViewModelStore {
-        return ViewModelStore()
-    }
+    override val viewModelStore: ViewModelStore
+        get() = ViewModelStore()
 
     private fun fetchPartialContacts(
         part: ContactPart,
@@ -461,7 +461,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
             } ?: contactPart.selection,
             contactId?.let { arrayOf(it) + contactPart.selectionArgs } ?: contactPart.selectionArgs,
             contactPart.sortOrder,
-            null,
+            null as android.os.CancellationSignal?,
         )
         cursor?.use {
             while (!cursor.isClosed && cursor.moveToNext()) {
