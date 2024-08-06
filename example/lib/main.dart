@@ -50,8 +50,8 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       theme: ThemeData(
         scrollbarTheme: ScrollbarThemeData(
-          trackVisibility: MaterialStateProperty.all(true),
-          thumbVisibility: MaterialStateProperty.all(true),
+          trackVisibility: WidgetStateProperty.all(true),
+          thumbVisibility: WidgetStateProperty.all(true),
         ),
       ),
       home: Scaffold(
