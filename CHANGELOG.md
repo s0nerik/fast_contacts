@@ -1,3 +1,7 @@
+## 3.1.5
+
+- Android build fix for Flutter 3.24
+
 ## 3.1.4
 
 - Android: return `null` instead of an error upon failed attempt to read a contact image file
