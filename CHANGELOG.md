@@ -1,4 +1,14 @@
+## 4.0.0
+
+- Adjusted Flutter SDK version constraint to `>=3.24.0` due to build issues on Android with older Flutter versions.
+  
+  Use `fast_contacts: 3.1.4` for older Flutter versions.
+
 ## 3.1.5
+
+> Retracted due to Android build issues on older Flutter versions.
+> 
+> Use `fast_contacts: ^4.0.0` for Flutter 3.24 and newer or `fast_contacts: 3.1.4` for older Flutter versions.
 
 - Android build fix for Flutter 3.24
 

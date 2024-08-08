@@ -1,13 +1,13 @@
 name: fast_contacts
 description: >
   A faster way of accessing the device's contacts list. Allows fetching the whole contacts list in a sane amount of time.
-version: 3.1.5
+version: 4.0.0
 homepage: https://pub.dev/packages/fast_contacts
 repository: https://github.com/s0nerik/fast_contacts
 
 environment:
   sdk: ">=2.15.0 <4.0.0"
-  flutter: ">=1.20.0"
+  flutter: ">=3.24.0"
 
 dependencies:
   flutter:
