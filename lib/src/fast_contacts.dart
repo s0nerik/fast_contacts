@@ -40,6 +40,7 @@ class FastContacts {
       const MethodChannel('com.github.s0nerik.fast_contacts');
 
   static var _getAllContactsInProgress = false;
+  static bool get getAllContactsInProgress => _getAllContactsInProgress;
 
   /// Returns all contacts.
   ///
