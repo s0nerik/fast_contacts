@@ -10,3 +10,6 @@ build/
 .idea/
 
 *.iml
+
+.build/
+.swiftpm/

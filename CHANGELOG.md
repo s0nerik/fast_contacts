@@ -1,3 +1,7 @@
+## 5.0.0
+
+- SPM support
+
 ## 4.0.0
 
 - Adjusted Flutter SDK version constraint to `>=3.24.0` due to build issues on Android with older Flutter versions.
