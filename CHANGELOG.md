@@ -1,3 +1,7 @@
+## 5.0.1
+
+- Cocoapods support fix
+
 ## 5.0.0
 
 - SPM support
