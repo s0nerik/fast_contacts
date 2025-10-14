@@ -1,0 +1,24 @@
+name: example_cocoapods
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+#  fast_contacts: ^5.0.0
+  fast_contacts:
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  config:
+    disable-swift-package-manager: true
