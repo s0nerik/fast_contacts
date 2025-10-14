@@ -13,15 +13,14 @@ Contacts plugin for Flutter
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Sasha Isaienko' => 'sonerik.dev@gmail.com' }
   s.source           = { :path => '.' }
-  s.source_files     = 'fast_contacts/Sources/**/*.{h,m,swift}'
+  s.source_files     = 'fast_contacts/Sources/fast_contacts/**/*.swift'
   s.dependency         'Flutter'
   s.platform         = :ios, '11.0'
 
   # Flutter.framework does not contain a i386 slice. Only x86_64 and arm64 simulators are supported.
   s.pod_target_xcconfig = { 
     'DEFINES_MODULE' => 'YES', 
-    'VALID_ARCHS[sdk=iphonesimulator*]' => 'x86_64 arm64',
-    'SWIFT_OBJC_INTERFACE_HEADER_NAME' => 'fast_contacts-Swift.h'
+    'VALID_ARCHS[sdk=iphonesimulator*]' => 'x86_64 arm64'
   }
   s.swift_version = '5.0'
 end

@@ -90,10 +90,10 @@ private func getContactFieldKeyDescriptors(field: ContactField) -> [CNKeyDescrip
 }
 
 @available(iOS 9.0, *)
-public class SwiftFastContactsPlugin: NSObject, FlutterPlugin {
+public class FastContactsPlugin: NSObject, FlutterPlugin {
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "com.github.s0nerik.fast_contacts", binaryMessenger: registrar.messenger())
-        let instance = SwiftFastContactsPlugin()
+        let instance = FastContactsPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
     }
     

@@ -15,14 +15,7 @@ let package = Package(
     targets: [
         .target(
             name: "fast_contacts",
-            dependencies: ["FastContactsSwift"],
-            path: "Sources/FastContactsPlugin",
-            publicHeadersPath: "include"
-        ),
-        .target(
-            name: "FastContactsSwift",
             dependencies: [],
-            path: "Sources/FastContactsSwift"
         )
     ]
 )
