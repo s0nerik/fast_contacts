@@ -153,7 +153,7 @@ class FastContactsPlugin : FlutterPlugin, MethodCallHandler, LifecycleOwner, Vie
         ContactPart.values().associateWith { Executors.newSingleThreadExecutor() }
 
     private val imageExecutor = ThreadPoolExecutor(
-        4, Integer.MAX_VALUE,
+        4, 12,
         20L, TimeUnit.SECONDS,
         SynchronousQueue(),
     )
