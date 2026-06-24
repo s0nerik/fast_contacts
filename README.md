@@ -1,9 +1,9 @@
 # fast_contacts
 
-[![fast_contacts](https://img.shields.io/pub/v/fast_contacts)](https://pub.dev/packages/fast_contacts)
-[![fast_contacts](https://img.shields.io/pub/likes/fast_contacts)](https://pub.dev/packages/fast_contacts)
-[![fast_contacts](https://img.shields.io/pub/points/fast_contacts)](https://pub.dev/packages/fast_contacts)
-[![fast_contacts](https://img.shields.io/pub/popularity/fast_contacts)](https://pub.dev/packages/fast_contacts)
+[![Version](https://img.shields.io/pub/v/fast_contacts)](https://pub.dev/packages/fast_contacts)
+[![Likes](https://img.shields.io/pub/likes/fast_contacts)](https://pub.dev/packages/fast_contacts)
+[![Points](https://img.shields.io/pub/points/fast_contacts)](https://pub.dev/packages/fast_contacts)
+[![Downloads](https://img.shields.io/pub/dm/fast_contacts)](https://pub.dev/packages/fast_contacts)
 
 A **much** faster alternative to [contacts_service](https://pub.dev/packages/contacts_service) and [flutter_contact](https://pub.dev/packages/flutter_contact) for reading the device's contact book.
 
@@ -14,21 +14,21 @@ Loading 1000 contacts with this plugin should take ~200ms or less depending on t
 
 To use this plugin, add `fast_contacts` as a [dependency in your `pubspec.yaml` file](https://flutter.io/platform-plugins/).
 
-## Permissions  
-### Android  
-Add the following permission to your AndroidManifest.xml:  
+## Permissions
+### Android
+Add the following permission to your AndroidManifest.xml:
 
-```xml  
-<uses-permission android:name="android.permission.READ_CONTACTS" />  
+```xml
+<uses-permission android:name="android.permission.READ_CONTACTS" />
 ```
 
 ### iOS
-Set the `NSContactsUsageDescription` in your `Info.plist` file  
-  
-```xml  
-<key>NSContactsUsageDescription</key>  
-<string>Description of why you need the contacts permission.</string>  
-```  
+Set the `NSContactsUsageDescription` in your `Info.plist` file
+
+```xml
+<key>NSContactsUsageDescription</key>
+<string>Description of why you need the contacts permission.</string>
+```
 
 **Note**
 `fast_contacts` doesn't handle permissions. Use special plugins (like [permission_handler](https://pub.dartlang.org/packages/permission_handler)) to ask for the permission before accessing contacts.
@@ -45,8 +45,8 @@ Set the `NSContactsUsageDescription` in your `Info.plist` file
 ## Example
 
 ```dart
-// Import package  
-import 'package:fast_contacts/fast_contacts.dart';  
+// Import package
+import 'package:fast_contacts/fast_contacts.dart';
 
 // Get all contacts
 final contacts = await FastContacts.getAllContacts();
