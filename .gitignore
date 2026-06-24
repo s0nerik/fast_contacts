@@ -13,3 +13,6 @@ build/
 
 .build/
 .swiftpm/
+
+# FVM Version Cache
+.fvm/
